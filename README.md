@@ -19,7 +19,7 @@ Legion is a flexible and provider-agnostic framework designed to simplify the cr
 *   **Monitoring and Observability:** Built-in monitoring tools for tracking performance, errors, and resource usage.
 *   **Asynchronous Support:** Fully asynchronous design for efficient and scalable operations.
 
-## Installation
+## Installation (WIP, not yet available during pre-release phase)
 
 ```bash
 pip install legion
@@ -302,7 +302,7 @@ Contributions are welcome! Please feel free to submit pull requests, report issu
 
 ## Project Status & Roadmap
 
-View the [Legion Project Board](https://github.com/orgs/og-hayden/projects/1/views/1) for the current status of the project.
+View the [Legion Project Board](https://github.com/users/og-hayden/projects/1) for the current status of the project.
 
 To view the current roadmap for Legion, please see the [Legion Roadmap](https://github.com/users/og-hayden/projects/1/views/4).
 
