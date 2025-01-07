@@ -300,6 +300,12 @@ Eventually, there will be a more comprehensive documentation site.
 
 Contributions are welcome! Please feel free to submit pull requests, report issues, or suggest new features.
 
+## Project Status & Roadmap
+
+View the [Legion Project Board](https://github.com/orgs/og-hayden/projects/1/views/1) for the current status of the project.
+
+To view the current roadmap for Legion, please see the [Legion Roadmap](https://github.com/users/og-hayden/projects/1/views/4).
+
 ## License
 
 Legion is released under the MIT License. See the `LICENSE` file for more details.
