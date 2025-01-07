@@ -160,12 +160,12 @@ class FunctionTool(BaseTool):
         try:
             # Get injected values including defaults and message-specific injections
             injected = self.get_injected_values(kwargs.pop("__injected_parameters__", None))
-            logger.debug(f"Got injected values: {injected}")
+            logger.debug(f"Using injected values: {injected}")
             
             # Create a new dict with injected values and update with provided kwargs
             all_kwargs = dict(injected)
             all_kwargs.update(kwargs)
-            logger.debug(f"Merged kwargs: {all_kwargs}")
+            logger.debug(f"Final merged kwargs: {all_kwargs}")
             
             # Pass the merged kwargs to super().__call__
             return await super().__call__(**all_kwargs)
@@ -193,6 +193,36 @@ class FunctionTool(BaseTool):
         logger.debug(f"[TOOL BIND] Injectable params: {bound_tool.injected_params}")
         
         return bound_tool
+    
+    def get_schema(self) -> Dict[str, Any]:
+        """Get OpenAI-compatible function schema"""
+        # TODO: Ensure this is compatible with all providers
+        schema = self.parameters.model_json_schema()
+        
+        # Filter out injected parameters from schema
+        filtered_properties = {
+            k: v for k, v in schema.get("properties", {}).items() 
+            if k not in self.injected_params
+        }
+        
+        # Remove injected params from required list
+        required = [
+            param for param in schema.get("required", [])
+            if param not in self.injected_params
+        ]
+        
+        return {
+            "type": "function",
+            "function": {
+                "name": self.name,
+                "description": self.description,
+                "parameters": {
+                    "type": "object",
+                    "properties": filtered_properties,
+                    "required": required
+                }
+            }
+        }
 
 def tool(
     func=None,  # Allow positional function argument for @tool syntax

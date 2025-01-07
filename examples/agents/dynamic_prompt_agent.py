@@ -64,7 +64,7 @@ def get_weather(
     return f"It's sunny and 72°F in {location}"
 
 @agent(
-    model="openai:gpt-4",
+    model="openai:gpt-4o-mini",
     temperature=0.7,
     system_prompt=SYSTEM_PROMPT,
     tools=[get_weather] # Binding external tools
@@ -102,7 +102,7 @@ async def main():
     # Example 2: Provide dynamic values during process
     print("Example 2 (With Dynamic Values):")
     dynamic_values = {
-        "mood": "energetic and enthusiastic",
+        "mood": "energetic and enthusiastic, you really like to speak like a pirate",
         "context": "casual conversation",
         "time": "9:00 AM"
     }

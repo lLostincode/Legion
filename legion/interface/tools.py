@@ -30,6 +30,7 @@ class BaseTool(ABC):
     
     def get_schema(self) -> Dict[str, Any]:
         """Get OpenAI-compatible function schema"""
+        # TODO: Ensure this is compatible with all providers
         schema = self.parameters.model_json_schema()
         
         # Filter out injected parameters from schema
@@ -69,26 +70,30 @@ class BaseTool(ABC):
     async def __call__(self, **kwargs) -> Any:
         """Make tool callable, validating parameters"""
         try:
-            # Create a new dict with injected values and update with provided kwargs
-            all_kwargs = dict(self._injected_values)  # Start with injected values
+            # Start with injected values
+            all_kwargs = dict(self._injected_values)
             logger.debug(f"Starting with injected values: {all_kwargs}")
             
-            # Update with provided kwargs
-            all_kwargs.update(kwargs)
+            # Update with provided kwargs, but don't override injected values
+            for key, value in kwargs.items():
+                if key not in self.injected_params or key not in all_kwargs:
+                    all_kwargs[key] = value
             logger.debug(f"After merging with provided kwargs: {all_kwargs}")
             
+            # Validate all parameters together
             try:
                 validated = self.parameters(**all_kwargs)
+                validated_dict = validated.model_dump()
                 logger.debug(f"Validation successful")
             except Exception as e:
                 logger.error(f"Validation failed: {str(e)}")
                 raise ToolError(f"Invalid parameters for tool {self.name}: {str(e)}")
             
             if self._is_async:
-                return await self.arun(**validated.model_dump())
+                return await self.arun(**validated_dict)
             else:
                 return await asyncio.get_event_loop().run_in_executor(
-                    None, lambda: self.run(**validated.model_dump())
+                    None, lambda: self.run(**validated_dict)
                 )
         except Exception as e:
             if isinstance(e, (ValueError, ToolError)):

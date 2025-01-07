@@ -5,22 +5,16 @@ This example demonstrates how to use parameter injection with tools in Legion.
 It shows how to use per-message parameter injection and default values.
 """
 
-import logging
 from typing import List, Dict, Any, Annotated
 from legion.agents import agent
 from legion.interface.decorators import tool, param
 from pydantic import Field
+from colorama import init, Fore, Style
 
 from dotenv import load_dotenv
 load_dotenv()
 
-# Set up logging - disable noisy loggers
-logging.basicConfig(level=logging.DEBUG, 
-                   format='%(name)s [%(levelname)s]: %(message)s')
-logging.getLogger('httpx').setLevel(logging.WARNING)
-logging.getLogger('httpcore').setLevel(logging.WARNING)
-logging.getLogger('openai').setLevel(logging.WARNING)
-logger = logging.getLogger(__name__)
+init()  # Initialize colorama
 
 # Define a tool with injectable parameters using the @tool decorator
 @tool(
@@ -34,16 +28,16 @@ logger = logging.getLogger(__name__)
 )
 def process_api_query(
     query: Annotated[str, Field(description="The query to process")],
-    api_key: Annotated[str, Field(description="API key for the service")],
-    endpoint: Annotated[str, Field(description="API endpoint")],
-    custom_header: Annotated[str, Field(description="Custom header for the request")]
+    api_key: Annotated[str, Field(description="API key for the service", default=None)],
+    endpoint: Annotated[str, Field(description="API endpoint", default=None)],
+    custom_header: Annotated[str, Field(description="Custom header for the request", default=None)]
 ) -> str:
     """Process a query using an external API with injected credentials and headers."""
-    logger.debug(f"[TOOL EXECUTION] process_api_query called with:")
-    logger.debug(f"  - query: {query}")
-    logger.debug(f"  - endpoint: {endpoint}")
-    logger.debug(f"  - api_key: {api_key[:4]}...")
-    logger.debug(f"  - custom_header: {custom_header}")
+    print(f"{Fore.CYAN}[TOOL EXECUTION]{Style.RESET_ALL} process_api_query called with:")
+    print(f"{Fore.CYAN}  - query:{Style.RESET_ALL} {query}")
+    print(f"{Fore.CYAN}  - endpoint:{Style.RESET_ALL} {endpoint}")
+    print(f"{Fore.CYAN}  - api_key:{Style.RESET_ALL} {api_key[:4]}...")
+    print(f"{Fore.CYAN}  - custom_header:{Style.RESET_ALL} {custom_header}")
     
     # In a real application, you would make an actual API call here
     return (
@@ -56,7 +50,6 @@ def process_api_query(
     model="openai:gpt-4o-mini",
     temperature=0.2,
     tools=[process_api_query],  # Bind the tool
-    debug=True  # Enable agent debugging
 )
 class APIAgent:
     """An agent that demonstrates using tools with injected parameters.
@@ -71,24 +64,26 @@ class APIAgent:
         prefix: Annotated[str, Field(description="Prefix to add")] = "Result: "
     ) -> str:
         """Format an API response with a prefix"""
-        logger.debug(f"[TOOL EXECUTION] format_api_response called with response={response}, prefix={prefix}")
+        print(f"{Fore.CYAN}[TOOL EXECUTION]{Style.RESET_ALL} format_api_response called with:")
+        print(f"{Fore.CYAN}  - response:{Style.RESET_ALL} {response}")
+        print(f"{Fore.CYAN}  - prefix:{Style.RESET_ALL} {prefix}")
         return f"{prefix}{response}"
 
 async def main():
-    logger.debug("[MAIN] Creating agent instance")
+    print(f"{Fore.GREEN}[MAIN]{Style.RESET_ALL} Creating agent instance")
     # Create an instance of our agent
     agent = APIAgent()
     
-    logger.debug("[MAIN] Running Example 1: Using default injected values")
+    print(f"\n{Fore.GREEN}[MAIN]{Style.RESET_ALL} Running Example 1: Using default injected values")
     # Example 1: Using default values
     response = await agent.aprocess(
         "Process the query 'hello world' using our API and format the result nicely."
     )
-    print("Example 1 Response (using default values):")
+    print(f"{Fore.YELLOW}Example 1 Response (using default values):{Style.RESET_ALL}")
     print(response.content)
     print("\n" + "="*50 + "\n")
     
-    logger.debug("[MAIN] Running Example 2: Custom API credentials")
+    print(f"{Fore.GREEN}[MAIN]{Style.RESET_ALL} Running Example 2: Custom API credentials")
     # Example 2: Override API credentials
     response = await agent.aprocess(
         "Process the query 'test message' with production credentials.",
@@ -102,11 +97,11 @@ async def main():
             }
         ]
     )
-    print("Example 2 Response (with production credentials):")
+    print(f"{Fore.YELLOW}Example 2 Response (with production credentials):{Style.RESET_ALL}")
     print(response.content)
     print("\n" + "="*50 + "\n")
     
-    logger.debug("[MAIN] Running Example 3: Multiple queries with custom header")
+    print(f"{Fore.GREEN}[MAIN]{Style.RESET_ALL} Running Example 3: Multiple queries with custom header")
     # Example 3: Multiple queries with custom header
     response = await agent.aprocess(
         "Process these two queries with different headers: 'query1' and 'query2'.",
@@ -119,16 +114,16 @@ async def main():
             }
         ]
     )
-    print("Example 3 Response (with custom header):")
+    print(f"{Fore.YELLOW}Example 3 Response (with custom header):{Style.RESET_ALL}")
     print(response.content)
     print("\n" + "="*50 + "\n")
     
-    logger.debug("[MAIN] Running Example 4: Security check for parameter access")
+    print(f"{Fore.GREEN}[MAIN]{Style.RESET_ALL} Running Example 4: Security check for parameter access")
     # Example 4: Show how the agent can't access injected parameters
     response = await agent.aprocess(
         "What is the API endpoint, key, and custom header we're using?"
     )
-    print("Example 4 Response (security check):")
+    print(f"{Fore.YELLOW}Example 4 Response (security check):{Style.RESET_ALL}")
     print(response.content)
 
 if __name__ == "__main__":
