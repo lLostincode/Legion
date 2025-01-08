@@ -1,9 +1,12 @@
-from typing import List, Dict, Any, Optional, Union, Callable
 from enum import Enum
+from typing import Any, Callable, Dict, List, Optional, Union
+
 from pydantic import BaseModel, Field
+
 
 class Role(str, Enum):
     """Message role"""
+
     SYSTEM = "system"
     USER = "user"
     ASSISTANT = "assistant"
@@ -12,12 +15,14 @@ class Role(str, Enum):
 
 class TokenUsage(BaseModel):
     """Token usage information"""
+
     prompt_tokens: int
     completion_tokens: int
     total_tokens: int
 
 class Message(BaseModel):
     """Message schema"""
+
     content: str
     role: Role = Role.USER
     name: Optional[str] = None
@@ -27,6 +32,7 @@ class Message(BaseModel):
 
 class ModelResponse(BaseModel):
     """Model response schema"""
+
     content: str
     role: Role = Role.ASSISTANT
     tool_calls: Optional[List[Dict[str, Any]]] = None
@@ -35,32 +41,35 @@ class ModelResponse(BaseModel):
 
 class ProviderConfig(BaseModel):
     """Base provider configuration"""
+
     api_key: Optional[str] = None
     base_url: Optional[str] = None
     organization_id: Optional[str] = None
     timeout: int = Field(default=60, ge=1)
     max_retries: int = Field(default=3, ge=0)
-    
+
     class Config:
         extra = "allow"  # Allow provider-specific config options
 
 class ChatParameters(BaseModel):
     """Standard parameters for chat completions"""
+
     temperature: float = Field(default=1.0, ge=0.0, le=2.0)
     max_tokens: Optional[int] = Field(default=None, ge=1)
     stream: bool = False
     stop: Optional[Union[str, List[str]]] = None
-    
+
     class Config:
         extra = "allow"  # Allow provider-specific parameters
 
 class SystemPromptSection(BaseModel):
     """Section of a system prompt that can be static or dynamic"""
+
     content: Union[str, Callable[[], str]]  # Allow callable for dynamic content
     is_dynamic: bool = False
     section_id: Optional[str] = None
     default_value: Optional[Union[str, Callable[[], str]]] = None  # Add default value support
-    
+
     model_config = {
         "arbitrary_types_allowed": True  # Allow callable types
     }
@@ -69,10 +78,10 @@ class SystemPromptSection(BaseModel):
         """Render the section content with dynamic values"""
         if not self.is_dynamic:
             return self.content() if callable(self.content) else self.content
-        
+
         # Get the value to use
         value = None
-        
+
         # If we have dynamic values and a section_id, use that value
         if dynamic_values and self.section_id and self.section_id in dynamic_values:
             value = dynamic_values[self.section_id]
@@ -85,7 +94,7 @@ class SystemPromptSection(BaseModel):
                 value = self.content.format(**dynamic_values)
             except (KeyError, ValueError):
                 pass  # Fall through to default if formatting fails
-        
+
         # If no value yet, try default value
         if value is None and self.default_value is not None:
             if callable(self.default_value):
@@ -95,11 +104,11 @@ class SystemPromptSection(BaseModel):
                     value = self.default_value.format(**dynamic_values) if dynamic_values else self.default_value
                 except (KeyError, ValueError):
                     value = self.default_value
-        
+
         # If still no value, use raw content
         if value is None:
             value = self.content() if callable(self.content) else self.content
-        
+
         # Format with key-value pair if we have a section_id
         if self.section_id:
             return f"{self.section_id}: {value}"
@@ -107,6 +116,7 @@ class SystemPromptSection(BaseModel):
 
 class SystemPrompt(BaseModel):
     """Template-based system prompt with static and dynamic sections"""
+
     sections: List[SystemPromptSection] = Field(
         default_factory=list,
         description="Ordered sections of the system prompt"
@@ -115,20 +125,20 @@ class SystemPrompt(BaseModel):
         None,
         description="Static prompt text (used if no sections defined)"
     )
-    
+
     def render(self, dynamic_values: Optional[Dict[str, str]] = None) -> str:
         """Render the complete system prompt with any dynamic values"""
         if not self.sections:
             return self.static_prompt or ""
-        
+
         rendered_sections = []
         dynamic_values = dynamic_values or {}
-        
+
         for section in self.sections:
             rendered_sections.append(section.render(dynamic_values))
-        
+
         return "\n\n".join(rendered_sections)
-    
+
     def __str__(self) -> str:
         """String representation should be the rendered content"""
         return self.render()

@@ -1,16 +1,14 @@
-import os
+import sys
+
 import pytest
 from dotenv import load_dotenv
-from typing import List, Dict, Any
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
-from legion.interface.schemas import Message, Role, ModelResponse, SystemPrompt, SystemPromptSection
-from legion.interface.tools import BaseTool
 from legion.agents.base import Agent
-from legion.errors.exceptions import ToolError
+from legion.interface.schemas import Message, ModelResponse, Role, SystemPrompt, SystemPromptSection
+from legion.interface.tools import BaseTool
 from legion.memory.providers.memory import ConversationMemory
 
-import sys
 # Load environment variables
 load_dotenv()
 
@@ -30,11 +28,11 @@ class SimpleTool(BaseTool):
             description="A simple test tool",
             parameters=SimpleToolParams
         )
-    
+
     def run(self, message: str) -> str:
         """Implement the sync run method"""
         return f"Tool response: {message}"
-    
+
     async def arun(self, message: str) -> str:
         """Implement the async run method"""
         return self.run(message)
@@ -206,7 +204,7 @@ def test_tool_and_json_completion(agent_with_tools):
     assert isinstance(response, ModelResponse)
     assert response.tool_calls is not None
     assert len(response.tool_calls) > 0
-    
+
     # Verify JSON response
     data = PersonInfo.model_validate_json(response.content)
     assert isinstance(data.name, str)
@@ -216,11 +214,11 @@ def test_tool_and_json_completion(agent_with_tools):
 def test_memory_management(agent):
     # Test memory initialization
     assert len(agent.memory.messages) == 1  # system prompt
-    
+
     # Test message addition
     agent.process("Hello")
     assert len(agent.memory.messages) == 3  # system + user + assistant
-    
+
     # Test memory reset by creating new memory instance
     agent._memory = ConversationMemory()
     agent._memory.add_message(Message(
@@ -241,7 +239,7 @@ def test_debug_mode():
     # Test agent with debug mode enabled
     agent = Agent(name="test", model="gpt-4o-mini", debug=True)
     assert agent.debug is True
-    
+
     # Process a message (output will be visible in test logs)
     response = agent.process("Hello")
     assert isinstance(response, ModelResponse)
@@ -255,6 +253,6 @@ if __name__ == "__main__":
         "--tb=short",
         "--asyncio-mode=auto"
     ]
-    
+
     # Run tests
     sys.exit(pytest.main(args))

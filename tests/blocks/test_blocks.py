@@ -1,10 +1,12 @@
-import pytest
-from typing import List, Dict, Any, Optional, Union
-from pydantic import BaseModel, Field
 import asyncio
+from typing import Any, Dict, List, Optional
 
-from legion.blocks.base import BlockMetadata, FunctionalBlock, BlockError, ValidationError
+import pytest
+from pydantic import BaseModel
+
+from legion.blocks.base import BlockError, BlockMetadata, FunctionalBlock, ValidationError
 from legion.blocks.decorators import block
+
 
 # Test Models
 class SimpleInput(BaseModel):
@@ -74,7 +76,7 @@ def test_block_metadata():
         name="test",
         description="test description"
     )
-    
+
     assert metadata.name == "test"
     assert metadata.description == "test description"
     assert metadata.version == "1.0"  # default value
@@ -92,7 +94,7 @@ def test_block_metadata_with_schemas():
         version="2.0",
         tags=["test", "example"]
     )
-    
+
     assert metadata.input_schema == SimpleInput
     assert metadata.output_schema == SimpleOutput
     assert metadata.version == "2.0"
@@ -135,16 +137,16 @@ def test_block_validation():
     )
     def validator(data: SimpleInput) -> Dict[str, str]:
         return {"result": f"Validated: {data.value}"}
-    
+
     # Test valid input
     result = asyncio.run(validator(SimpleInput(value="test")))
     assert isinstance(result, SimpleOutput)
     assert result.result == "Validated: test"
-    
+
     # Test invalid input
     with pytest.raises(ValidationError):
         asyncio.run(validator({"wrong_field": "test"}))
-    
+
     # Test invalid output schema
     @block(
         input_schema=SimpleInput,
@@ -152,7 +154,7 @@ def test_block_validation():
     )
     def invalid_output(data: SimpleInput) -> str:
         return "Invalid output type"
-    
+
     with pytest.raises(ValidationError):
         asyncio.run(invalid_output(SimpleInput(value="test")))
 
@@ -161,11 +163,11 @@ def test_block_without_validation():
     @block(validate=False)
     def no_validation(data: Any) -> Any:
         return data
-    
+
     # Should accept any input
     result = asyncio.run(no_validation({"any": "data"}))
     assert result == {"any": "data"}
-    
+
     result = asyncio.run(no_validation("string data"))
     assert result == "string data"
 
@@ -177,13 +179,13 @@ def test_complex_block():
     )
     def process_complex(data: ComplexInput) -> Dict[str, Any]:
         return complex_processor(data)
-    
+
     input_data = ComplexInput(
         numbers=[1, 2, 3, 4],
         text="test",
         optional_field="optional"
     )
-    
+
     result = asyncio.run(process_complex(input_data))
     assert isinstance(result, ComplexOutput)
     assert result.sum == 10
@@ -195,15 +197,15 @@ def test_generic_type_validation():
     @block(input_schema=List[int])
     def sum_numbers(numbers: List[int]) -> int:
         return sum(numbers)
-    
+
     # Valid input
     result = asyncio.run(sum_numbers([1, 2, 3]))
     assert result == 6
-    
+
     # Invalid input
     with pytest.raises(ValidationError):
         asyncio.run(sum_numbers(["1", "2", "3"]))  # strings instead of ints
-    
+
     with pytest.raises(ValidationError):
         asyncio.run(sum_numbers("not a list"))  # not a list
 
@@ -212,7 +214,7 @@ def test_block_error_handling():
     @block(input_schema=SimpleInput)
     def error_block(data: SimpleInput) -> str:
         raise ValueError("Test error")
-    
+
     with pytest.raises(BlockError) as exc_info:
         asyncio.run(error_block(SimpleInput(value="test")))
     assert "Test error" in str(exc_info.value)
@@ -223,7 +225,7 @@ def test_block_descriptor_protocol():
         @block(input_schema=SimpleInput, output_schema=SimpleOutput)
         def process(self, data: SimpleInput) -> Dict[str, str]:
             return {"result": f"Instance processed: {data.value}"}
-    
+
     container = BlockContainer()
     result = asyncio.run(container.process(SimpleInput(value="test")))
     assert isinstance(result, SimpleOutput)
@@ -240,7 +242,7 @@ def test_block_decorator_customization():
     )
     def custom_block(data: str) -> str:
         return f"Custom: {data}"
-    
+
     assert custom_block.metadata.name == "custom_block"
     assert custom_block.metadata.description == "Custom description"
     assert custom_block.metadata.version == "2.0"
@@ -253,7 +255,7 @@ def test_block_docstring_description():
     def docstring_block(data: str) -> str:
         """This is a test description"""
         return data
-    
+
     assert docstring_block.metadata.description == "This is a test description"
 
 @pytest.mark.asyncio
@@ -263,13 +265,13 @@ async def test_block_concurrent_execution():
     async def delayed_block(delay: float) -> float:
         await asyncio.sleep(delay)
         return delay
-    
+
     # Execute blocks concurrently
     delays = [0.1, 0.2, 0.3]
     tasks = [delayed_block(d) for d in delays]
     results = await asyncio.gather(*tasks)
-    
+
     assert results == delays
 
 if __name__ == "__main__":
-    pytest.main(["-v"]) 
+    pytest.main(["-v"])

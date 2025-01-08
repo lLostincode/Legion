@@ -1,11 +1,12 @@
 """Tests for chain decorators"""
 
-import pytest
 import asyncio
 import os
-from typing import Dict, Any, List, Optional, Type
-from pydantic import BaseModel
+from typing import Any, Dict, List, Optional, Type, Union
+
+import pytest
 from dotenv import load_dotenv
+from pydantic import BaseModel
 
 # Load environment variables
 load_dotenv()
@@ -20,7 +21,8 @@ if not os.getenv("OPENAI_API_KEY"):
 from legion.agents.decorators import agent
 from legion.blocks.decorators import block
 from legion.groups.decorators import chain
-from legion.interface.schemas import SystemPrompt, SystemPromptSection
+from legion.interface.schemas import Message, ModelResponse, Role, SystemPrompt, SystemPromptSection
+
 
 # Test schemas
 class InputData(BaseModel):
@@ -50,6 +52,7 @@ def preprocess_data(text: str) -> Dict:
 )
 class TestAgent:
     """Test agent that processes data"""
+
     pass
 
 @block(output_schema=OutputData)
@@ -71,19 +74,36 @@ def postprocess_data(text: str) -> Dict:
 )
 class ErrorAgent:
     """Test agent that raises errors"""
+
     async def _aprocess(
         self,
-        message: str,
+        message: Union[str, Dict[str, Any], Message],
         response_schema: Optional[Type[BaseModel]] = None,
         dynamic_values: Optional[Dict[str, str]] = None,
+        injected_parameters: Optional[List[Dict[str, Any]]] = None,
         verbose: bool = False
-    ) -> str:
+    ) -> ModelResponse:
+        """Process message and raise error"""
+        # Create error response before raising
+        response = ModelResponse(
+            content="Error will be raised",
+            raw_response={},
+            usage=None,
+            role=Role.ASSISTANT
+        )
+        # Add to memory if needed
+        if hasattr(self, "memory"):
+            self.memory.add_message(Message(
+                role=Role.ASSISTANT,
+                content=response.content
+            ))
         raise ValueError("Test error")
 
 # Test chains
 @chain(name="BasicChain")
 class BasicChain:
     """Basic test chain"""
+
     members = [
         preprocess_data,
         TestAgent,
@@ -93,6 +113,7 @@ class BasicChain:
 @chain(name="ErrorChain")
 class ErrorChain:
     """Chain that raises an error"""
+
     members = [
         preprocess_data,
         ErrorAgent,
@@ -102,7 +123,7 @@ class ErrorChain:
 def test_chain_error_handling():
     """Test that chain properly handles errors"""
     chain = ErrorChain()
-    
+
     with pytest.raises(ValueError) as exc_info:
         asyncio.run(chain.process("test input"))
     assert str(exc_info.value) == "Test error"
@@ -110,7 +131,7 @@ def test_chain_error_handling():
 async def test_chain_error_handling_async():
     """Test that chain properly handles errors in async mode"""
     chain = ErrorChain()
-    
+
     with pytest.raises(ValueError) as exc_info:
         await chain.process("test input")
     assert str(exc_info.value) == "Test error"
@@ -131,7 +152,7 @@ if __name__ == "__main__":
     # Run sync tests
     test_chain_error_handling()
     test_chain_processing()
-    
+
     # Run async tests
     asyncio.run(test_chain_error_handling_async())
     asyncio.run(test_chain_processing_async())

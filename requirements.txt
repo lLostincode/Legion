@@ -1,0 +1,16 @@
+annotated-types==0.6.0
+anthropic==0.30.1
+asyncio==3.4.3
+google-genai==0.3.0
+google-generativeai==0.8.2
+groq==0.4.2
+huggingface-hub==0.26.3
+ollama==0.4.2
+openai==1.55.0
+pydantic==2.10.2
+pytest==8.2.2
+flake8==7.0.0
+flake8-docstrings==1.7.0
+flake8-import-order==0.18.2
+flake8-quotes==3.4.0
+ruff==0.3.0

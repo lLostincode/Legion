@@ -1,12 +1,12 @@
 from .base import EdgeBase, EdgeMetadata
-from .validator import EdgeValidator, ValidationResult
 from .registry import EdgeRegistry, EdgeRegistryMetadata
+from .validator import EdgeValidator, ValidationResult
 
 __all__ = [
-    'EdgeBase',
-    'EdgeMetadata',
-    'EdgeValidator',
-    'ValidationResult',
-    'EdgeRegistry',
-    'EdgeRegistryMetadata'
-] 
+    "EdgeBase",
+    "EdgeMetadata",
+    "EdgeValidator",
+    "ValidationResult",
+    "EdgeRegistry",
+    "EdgeRegistryMetadata"
+]

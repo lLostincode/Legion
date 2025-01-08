@@ -1,28 +1,27 @@
-import pytest
-from typing import List, Dict, Any, Optional, Union, Type
-from pydantic import BaseModel, Field
 import asyncio
+import sys
 import time
+from typing import Any, Dict, List, Optional, Type, Union
 
-from legion.groups.chain import Chain, CHAIN_PROMPTS
-from legion.groups.types import AgentOrGroup
-from legion.groups.base import BaseGroup, GroupMetadata
-from legion.interface.schemas import Message, Role, SystemPrompt, ModelResponse
+import pytest
+from dotenv import load_dotenv
+from pydantic import BaseModel
+
 from legion.agents.base import Agent
 from legion.agents.decorators import agent
 from legion.errors import LegionError
+from legion.groups.chain import Chain
+from legion.interface.schemas import Message, ModelResponse, Role, SystemPrompt
 from legion.monitoring.events.chain import (
-    ChainStartEvent,
-    ChainStepEvent,
-    ChainTransformEvent,
+    ChainBottleneckEvent,
     ChainCompletionEvent,
     ChainErrorEvent,
+    ChainStartEvent,
     ChainStateChangeEvent,
-    ChainBottleneckEvent
+    ChainStepEvent,
+    ChainTransformEvent,
 )
 
-from dotenv import load_dotenv
-import sys
 load_dotenv()
 
 # Test Models
@@ -44,7 +43,7 @@ class ProcessedText(BaseModel):
 @agent(model="gpt-4o-mini")
 class TextCleaner:
     """Clean and normalize text input."""
-    
+
     def process_message(self, message: str) -> ModelResponse:
         if self.debug:
             print(f"Cleaning message: {message}")
@@ -59,7 +58,7 @@ class TextCleaner:
 @agent(model="gpt-4o-mini")
 class TextAnalyzer:
     """Analyze text and compute statistics."""
-    
+
     async def process_message(self, message: str) -> ModelResponse:
         if self.debug:
             print(f"Analyzing message: {message}")
@@ -75,7 +74,7 @@ class TextAnalyzer:
 @agent(model="gpt-4o-mini")
 class TextFormatter:
     """Format text analysis results."""
-    
+
     async def process_message(self, analysis: str) -> ModelResponse:
         if self.debug:
             print(f"Formatting analysis: {analysis}")
@@ -90,7 +89,7 @@ class TextFormatter:
 @agent(model="gpt-4o-mini")
 class ErrorAgent:
     """Agent that raises an error."""
-    
+
     async def _aprocess(self, message: Union[str, Dict[str, Any], Message], response_schema=None, verbose=False) -> ModelResponse:
         """Process message and raise error"""
         # Create a ModelResponse object before raising the error
@@ -178,12 +177,12 @@ def test_chain_initialization():
     assert chain.name == "test_chain"
     assert len(chain.members) == 2
     assert chain.metadata.group_type == "chain"
-    
+
     # Test initialization with single member (should fail)
     with pytest.raises(ValueError) as exc_info:
         Chain(name="invalid_chain", members=[TextCleaner()])
     assert "Chain must have at least 2 members" in str(exc_info.value)
-    
+
     # Test initialization with empty list
     with pytest.raises(ValueError):
         Chain(name="empty_chain", members=[])
@@ -191,14 +190,14 @@ def test_chain_initialization():
 def test_chain_member_setup(basic_chain):
     """Test chain member configuration"""
     members = list(basic_chain.members.values())
-    
+
     # Check first member
     assert isinstance(members[0].system_prompt, SystemPrompt)
     assert "first" in members[0].system_prompt.render().lower()
-    
+
     # Check middle member
     assert "position 2" in members[1].system_prompt.render().lower()
-    
+
     # Check last member
     assert "last" in members[2].system_prompt.render().lower()
 
@@ -219,7 +218,7 @@ def test_chain_with_schema(basic_chain):
     """Test chain processing with output schema"""
     class OutputSchema(BaseModel):
         result: str
-    
+
     result = asyncio.run(basic_chain.process(
         "Test Message",
         response_schema=OutputSchema
@@ -253,7 +252,7 @@ def test_circular_reference():
     # Create initial chains
     chain1 = Chain(name="chain1", members=[TextCleaner(), TextAnalyzer()])
     chain2 = Chain(name="chain2", members=[TextFormatter(), chain1])
-    
+
     # Attempt to create circular reference by adding chain2 to chain1
     with pytest.raises(LegionError) as exc_info:
         chain1.add_member("circular", chain2)
@@ -280,7 +279,7 @@ def test_add_member(basic_chain):
     """Test adding new members to chain"""
     new_agent = TextFormatter()
     basic_chain.add_member("formatter2", new_agent)
-    
+
     assert "formatter2" in basic_chain.members
     assert len(basic_chain.members) == 4
     assert list(basic_chain.members.values())[-1] == new_agent
@@ -307,7 +306,7 @@ def test_debug_mode(capsys):
 
     asyncio.run(chain.process("Test message"))
     captured = capsys.readouterr()
-    
+
     # Check debug output
     assert "test message" in captured.out.lower()  # Input message
     assert "textcleaner" in captured.out.lower()  # First member
@@ -320,7 +319,7 @@ def test_verbose_mode(capsys):
         members=[TextCleaner(), TextAnalyzer()],
         verbose=True
     )
-    
+
     asyncio.run(chain.process("Test Message"))
     captured = capsys.readouterr()
     assert "chain structure" in captured.out.lower()
@@ -331,7 +330,7 @@ def test_long_chain():
     """Test chain with many members"""
     members = [TextCleaner() for _ in range(10)]
     members.append(TextFormatter())
-    
+
     chain = Chain(name="long_chain", members=members)
     result = asyncio.run(chain.process("Test Message"))
     assert isinstance(result, Message)
@@ -343,12 +342,12 @@ def test_chain_with_different_message_types():
         name="type_chain",
         members=[TextCleaner(), TextAnalyzer()]
     )
-    
+
     # Test with string
     result1 = asyncio.run(chain.process("Test Message"))
     assert isinstance(result1, Message)
     assert len(result1.content) > 0
-    
+
     # Test with Message object
     msg = Message(role=Role.USER, content="Test Message")
     result2 = asyncio.run(chain.process(msg))
@@ -363,12 +362,12 @@ def test_chain_inheritance():
             if isinstance(message, str):
                 message = message.upper()
             return await super().process(message, **kwargs)
-    
+
     chain = CustomChain(
         name="custom_chain",
         members=[TextCleaner(), TextAnalyzer()]
     )
-    
+
     result = asyncio.run(chain.process("test message"))
     assert isinstance(result, Message)
     assert len(result.content) > 0
@@ -380,10 +379,10 @@ async def test_chain_concurrent_processing():
         Chain(name=f"chain_{i}", members=[TextCleaner(), TextAnalyzer()])
         for i in range(3)
     ]
-    
+
     tasks = [chain.process("Test Message") for chain in chains]
     results = await asyncio.gather(*tasks)
-    
+
     assert len(results) == 3
     assert all(isinstance(r, Message) for r in results)
     assert all(len(r.content) > 0 for r in results)
@@ -392,11 +391,11 @@ def test_chain_state_isolation():
     """Test that chains maintain isolated state"""
     chain1 = Chain(name="chain1", members=[TextCleaner(), TextAnalyzer()])
     chain2 = Chain(name="chain2", members=[TextCleaner(), TextAnalyzer()])
-    
+
     # Process messages through both chains
     result1 = asyncio.run(chain1.process("Message 1"))
     result2 = asyncio.run(chain2.process("Message 2"))
-    
+
     # Verify results are different
     assert result1.content != result2.content
 
@@ -406,40 +405,40 @@ def test_chain_event_emission():
         name="test_chain",
         members=[TextCleaner(), TextAnalyzer()]
     )
-    
+
     # Create event handler
     events = []
     def handler(event):
         events.append(event)
-    
+
     chain.add_event_handler(handler)
-    
+
     # Process message
     asyncio.run(chain.process("Test Message"))
-    
+
     # Verify events
     assert len(events) >= 6  # Start, 2x Step, 2x Transform, Completion
-    
+
     # Check event sequence
     assert isinstance(events[0], ChainStartEvent)
     assert events[0].metadata["member_count"] == 2
-    
+
     assert isinstance(events[1], ChainStepEvent)
     assert events[1].metadata["step_index"] == 0
     assert not events[1].metadata["is_final_step"]
-    
+
     assert isinstance(events[2], ChainTransformEvent)
     assert events[2].metadata["step_index"] == 0
     assert events[2].metadata["transformation_time_ms"] > 0
-    
+
     assert isinstance(events[3], ChainStepEvent)
     assert events[3].metadata["step_index"] == 1
     assert events[3].metadata["is_final_step"]
-    
+
     assert isinstance(events[4], ChainTransformEvent)
     assert events[4].metadata["step_index"] == 1
     assert events[4].metadata["transformation_time_ms"] > 0
-    
+
     assert isinstance(events[-1], ChainCompletionEvent)
     assert events[-1].metadata["total_time_ms"] > 0
     assert len(events[-1].metadata["step_times"]) == 2
@@ -451,40 +450,40 @@ async def test_chain_async_event_emission():
         name="test_chain",
         members=[TextCleaner(), TextAnalyzer()]
     )
-    
+
     # Create event handler
     events = []
     def handler(event):
         events.append(event)
-    
+
     chain.add_event_handler(handler)
-    
+
     # Process message
     await chain.process("Test Message")
-    
+
     # Verify events
     assert len(events) >= 6  # Start, 2x Step, 2x Transform, Completion
-    
+
     # Check event sequence
     assert isinstance(events[0], ChainStartEvent)
     assert events[0].metadata["member_count"] == 2
-    
+
     assert isinstance(events[1], ChainStepEvent)
     assert events[1].metadata["step_index"] == 0
     assert not events[1].metadata["is_final_step"]
-    
+
     assert isinstance(events[2], ChainTransformEvent)
     assert events[2].metadata["step_index"] == 0
     assert events[2].metadata["transformation_time_ms"] > 0
-    
+
     assert isinstance(events[3], ChainStepEvent)
     assert events[3].metadata["step_index"] == 1
     assert events[3].metadata["is_final_step"]
-    
+
     assert isinstance(events[4], ChainTransformEvent)
     assert events[4].metadata["step_index"] == 1
     assert events[4].metadata["transformation_time_ms"] > 0
-    
+
     assert isinstance(events[-1], ChainCompletionEvent)
     assert events[-1].metadata["total_time_ms"] > 0
     assert len(events[-1].metadata["step_times"]) == 2
@@ -494,7 +493,7 @@ def test_chain_error_event():
     class ErrorAgent(Agent):
         def __init__(self):
             super().__init__(name="error_agent", model="gpt-4o-mini")
-            
+
         async def _aprocess(
             self,
             message: str,
@@ -504,23 +503,23 @@ def test_chain_error_event():
             verbose: bool = False
         ) -> str:
             raise ValueError("Test error")
-    
+
     chain = Chain(
         name="error_chain",
         members=[TextCleaner(), ErrorAgent()]
     )
-    
+
     # Create event handler
     events = []
     def handler(event):
         events.append(event)
-    
+
     chain.add_event_handler(handler)
-    
+
     # Process message and expect error
     with pytest.raises(ValueError):
         asyncio.run(chain.process("Test Message"))
-    
+
     # Verify error event
     error_events = [e for e in events if isinstance(e, ChainErrorEvent)]
     assert len(error_events) == 1
@@ -536,13 +535,13 @@ def test_chain_bottleneck_detection(monkeypatch):
         nonlocal start_time
         start_time += 2.0  # Each call advances by 2 seconds
         return start_time
-    
-    monkeypatch.setattr(time, 'time', mock_time)
-    
+
+    monkeypatch.setattr(time, "time", mock_time)
+
     class SlowAgent(Agent):
         def __init__(self):
             super().__init__(name="slow_agent", model="gpt-4o-mini")
-            
+
         async def _aprocess(
             self,
             message: str,
@@ -559,26 +558,26 @@ def test_chain_bottleneck_detection(monkeypatch):
                 tool_calls=None,
                 role=Role.USER
             )
-    
+
     chain = Chain(
         name="slow_chain",
         members=[TextCleaner(), SlowAgent()]
     )
-    
+
     # Lower bottleneck threshold for testing
     chain._bottleneck_threshold_ms = 100.0
-    
+
     # Create event handler
     events = []
     def handler(event):
         events.append(event)
-    
+
     chain.add_event_handler(handler)
-    
+
     # Process messages to trigger bottleneck
     asyncio.run(chain.process("Test Message 1"))
     asyncio.run(chain.process("Test Message 2"))
-    
+
     # Verify bottleneck events
     bottleneck_events = [e for e in events if isinstance(e, ChainBottleneckEvent)]
     assert len(bottleneck_events) > 0
@@ -592,17 +591,17 @@ def test_chain_state_change_event():
         name="test_chain",
         members=[TextCleaner(), TextAnalyzer()]
     )
-    
+
     # Create event handler
     events = []
     def handler(event):
         events.append(event)
-    
+
     chain.add_event_handler(handler)
-    
+
     # Add new member
     chain.add_member("step_3", TextFormatter())
-    
+
     # Verify state change event
     state_events = [e for e in events if isinstance(e, ChainStateChangeEvent)]
     assert len(state_events) == 1
@@ -619,6 +618,6 @@ if __name__ == "__main__":
         "--tb=short",
         "--asyncio-mode=auto"
     ]
-    
+
     # Run tests
     sys.exit(pytest.main(args))

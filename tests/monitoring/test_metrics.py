@@ -1,21 +1,22 @@
 """Tests for system metrics collection"""
 
-import pytest
-import time
-import threading
 import os
 import platform
 import sys
-from unittest.mock import patch, MagicMock
+import threading
+import time
 
-from legion.monitoring.metrics import SystemMetricsCollector, MetricsContext
-from legion.monitoring.events.base import Event, EventType, EventCategory
+import pytest
+
+from legion.monitoring.events.base import Event, EventCategory, EventType
+from legion.monitoring.metrics import MetricsContext, SystemMetricsCollector
+
 
 def test_execution_context():
     """Test execution context collection"""
     collector = SystemMetricsCollector()
     context = collector.get_execution_context()
-    
+
     assert context["thread_id"] == threading.get_ident()
     assert context["process_id"] == os.getpid()
     assert context["host_name"] == platform.node()
@@ -24,18 +25,18 @@ def test_execution_context():
 def test_system_metrics():
     """Test system metrics collection"""
     collector = SystemMetricsCollector()
-    
+
     # Sleep to ensure some system activity
     time.sleep(0.1)
-    
+
     metrics = collector.get_system_metrics()
-    
+
     assert "system_cpu_percent" in metrics
     assert "system_memory_percent" in metrics
     assert "system_disk_usage_bytes" in metrics
     assert "system_network_bytes_sent" in metrics
     assert "system_network_bytes_received" in metrics
-    
+
     assert isinstance(metrics["system_cpu_percent"], float)
     assert isinstance(metrics["system_memory_percent"], float)
     assert isinstance(metrics["system_disk_usage_bytes"], int)
@@ -46,10 +47,10 @@ def test_process_metrics():
     """Test process metrics collection"""
     collector = SystemMetricsCollector()
     metrics = collector.get_process_metrics()
-    
+
     assert "memory_usage_bytes" in metrics
     assert "cpu_usage_percent" in metrics
-    
+
     assert isinstance(metrics["memory_usage_bytes"], int)
     assert isinstance(metrics["cpu_usage_percent"], float)
 
@@ -60,11 +61,11 @@ def test_metrics_context():
         component_id="test_agent",
         category=EventCategory.EXECUTION
     )
-    
+
     with MetricsContext(event):
         # Simulate some work
         time.sleep(0.1)
-    
+
     # Check that metrics were collected
     assert event.duration_ms >= 100  # At least 100ms
     assert event.thread_id == threading.get_ident()
@@ -92,11 +93,11 @@ def test_metrics_context_exception():
         component_id="test_agent",
         category=EventCategory.EXECUTION
     )
-    
+
     with pytest.raises(ValueError):
         with MetricsContext(event):
             raise ValueError("Test error")
-    
+
     # Metrics should still be collected
     assert event.duration_ms is not None
     assert event.thread_id is not None
@@ -112,4 +113,4 @@ def test_metrics_context_exception():
     assert event.cpu_usage_percent is not None
 
 if __name__ == "__main__":
-    pytest.main([__file__, "-v"]) 
+    pytest.main([__file__, "-v"])

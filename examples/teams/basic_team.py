@@ -1,5 +1,4 @@
-"""
-Basic Team Example
+"""Basic Team Example
 
 This example demonstrates how to create a team of agents using Legion's decorator syntax.
 The team consists of:
@@ -8,23 +7,25 @@ The team consists of:
 3. A writer that creates reports
 """
 
-from typing import List, Dict, Any, Annotated
-from legion.agents.decorators import agent
-from legion.groups.decorators import team, leader
-from legion.interface.decorators import tool
-from legion.memory.providers.memory import InMemoryProvider
-from pydantic import Field
+from typing import Annotated, Dict, List
 
 from dotenv import load_dotenv
+from pydantic import Field
+
+from legion.agents.decorators import agent
+from legion.groups.decorators import leader, team
+from legion.interface.decorators import tool
+from legion.memory.providers.memory import InMemoryProvider
 
 load_dotenv()
+
 
 # Create specialized tools for team members
 @tool
 def analyze_numbers(
     numbers: Annotated[List[float], Field(description="List of numbers to analyze")]
 ) -> Dict[str, float]:
-    """Analyze a list of numbers and return basic statistics"""
+    """Analyze a list of numbers and return basic statistics."""
     if not numbers:
         return {"mean": 0, "min": 0, "max": 0}
     return {
@@ -33,13 +34,14 @@ def analyze_numbers(
         "max": max(numbers)
     }
 
+
 @tool
 def format_report(
     title: Annotated[str, Field(description="Report title")],
     sections: Annotated[List[str], Field(description="List of report sections")],
     summary: Annotated[str, Field(description="Executive summary")] = None
 ) -> str:
-    """Format a professional report with sections"""
+    """Format a professional report with sections."""
     parts = [f"# {title}\n"]
     if summary:
         parts.extend(["\n## Executive Summary", summary])
@@ -47,22 +49,24 @@ def format_report(
         parts.extend([f"\n## Section {i}", section])
     return "\n".join(parts)
 
+
 # Define the research team using decorator syntax
 @team
 class ResearchTeam:
     """A team that collaborates on research tasks."""
-    
+
     # Shared memory provider for the team
     memory = InMemoryProvider()
-    
+
     @leader(
         model="openai:gpt-4o-mini",
         temperature=0.2
     )
     class Leader:
         """Research team coordinator who delegates tasks and synthesizes results."""
+
         pass
-    
+
     @agent(
         model="openai:gpt-4o-mini",
         temperature=0.1,
@@ -70,18 +74,20 @@ class ResearchTeam:
     )
     class Analyst:
         """Data analyst who processes numerical data and provides statistical insights."""
-        
+
         @tool
         def interpret_stats(
             self,
-            stats: Annotated[Dict[str, float], Field(description="Statistics to interpret")]
+            stats: Annotated[Dict[str, float], Field(
+                description="Statistics to interpret"
+            )]
         ) -> str:
-            """Interpret statistical results in plain language"""
+            """Interpret statistical results in plain language."""
             return (
                 f"The data shows an average of {stats['mean']:.2f}, "
                 f"ranging from {stats['min']:.2f} to {stats['max']:.2f}."
             )
-    
+
     @agent(
         model="openai:gpt-4o-mini",
         temperature=0.7,
@@ -89,17 +95,21 @@ class ResearchTeam:
     )
     class Writer:
         """Technical writer who creates clear and professional reports."""
-        
+
         @tool
         def create_report(
             self,
-            content: Annotated[str, Field(description="The content to include in the report")],
-            report_type: Annotated[str, Field(description="Type of report (e.g., analysis, summary, technical)")] = "analysis"
+            content: Annotated[str, Field(
+                description="The content to include in the report"
+            )],
+            report_type: Annotated[str, Field(
+                description="Type of report (e.g., analysis, summary, technical)"
+            )] = "analysis"
         ) -> str:
-            """Create a professional report from the given content"""
+            """Create a professional report from the given content."""
             # Generate a title based on the report type
             title = f"{report_type.title()} Report"
-            
+
             # Split content into sections
             sections = [
                 "Introduction",
@@ -107,7 +117,7 @@ class ResearchTeam:
                 content,
                 "Conclusion"
             ]
-            
+
             # Format the report using the format_report tool
             return format_report(
                 title=title,
@@ -115,25 +125,26 @@ class ResearchTeam:
                 summary=f"This report provides a {report_type} of the given data."
             )
 
+
 async def main():
     # Create an instance of our research team
     team = ResearchTeam()
-    
+
     # Example 1: Basic research task
     print("Example 1: Basic Research Task")
-    print("="*50)
-    
+    print("=" * 50)
+
     response = await team.aprocess(
         "We need to analyze these numbers: [10.5, 20.5, 15.0, 30.0, 25.5] "
         "and create a report for stakeholders."
     )
     print(response.content)
-    print("\n" + "="*50 + "\n")
-    
+    print("\n" + "=" * 50 + "\n")
+
     # Example 2: Complex research project
     print("Example 2: Complex Research Project")
-    print("="*50)
-    
+    print("=" * 50)
+
     response = await team.aprocess(
         "Let's conduct a research project on quarterly sales data:\n"
         "Q1: [100.0, 120.0, 95.0]\n"
@@ -144,6 +155,7 @@ async def main():
     )
     print(response.content)
 
+
 if __name__ == "__main__":
     import asyncio
-    asyncio.run(main()) 
+    asyncio.run(main())

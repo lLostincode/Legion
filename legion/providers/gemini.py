@@ -1,39 +1,46 @@
 """Google's Gemini-specific implementation of the LLM interface"""
 
-from typing import List, Dict, Any, Optional, Sequence, Type
-from openai import OpenAI
 import json
-import google.generativeai as genai
+from typing import Any, Dict, List, Optional, Sequence, Type
+
+from openai import OpenAI
 from pydantic import BaseModel
 
 from legion.interface.base import LLMInterface
 
-from .openai import OpenAIProvider
-from ..interface.schemas import Message, ModelResponse, ProviderConfig, TokenUsage, Role, ChatParameters
-from ..interface.tools import BaseTool
 from ..errors import ProviderError
+from ..interface.schemas import (
+    ChatParameters,
+    Message,
+    ModelResponse,
+    ProviderConfig,
+    Role,
+    TokenUsage,
+)
+from ..interface.tools import BaseTool
 from . import ProviderFactory
+from .openai import OpenAIProvider
+
 
 class GeminiFactory(ProviderFactory):
     """Factory for creating Gemini providers"""
-    
+
     def create_provider(self, config: Optional[ProviderConfig] = None, **kwargs) -> LLMInterface:
         """Create a new Gemini provider instance"""
         return GeminiProvider(config=config, **kwargs)
 
 class GeminiProvider(OpenAIProvider):
-    """
-    Google's Gemini-specific provider implementation.
+    """Google's Gemini-specific provider implementation.
     Inherits from OpenAIProvider since Gemini's API is OpenAI-compatible.
     """
-    
+
     DEFAULT_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/openai/"
     SUPPORTED_MODELS = {
         "gemini-1.5-flash-latest": "models/gemini-1.5-pro",
         "gemini-1.5-pro-latest": "models/gemini-1.5-pro-latest",
         "gemini-pro": "models/gemini-pro"
     }
-    
+
     def _setup_client(self) -> None:
         """Initialize Gemini client using OpenAI client"""
         try:
@@ -45,16 +52,16 @@ class GeminiProvider(OpenAIProvider):
             )
         except Exception as e:
             raise ProviderError(f"Failed to initialize Gemini client: {str(e)}")
-    
+
     def _format_messages(self, messages: List[Message]) -> List[Dict[str, Any]]:
         """Convert messages to Gemini format"""
         formatted_messages = []
-        
+
         for msg in messages:
             # Skip empty messages
             if not msg.content and not msg.tool_calls:
                 continue
-            
+
             if msg.role == Role.SYSTEM:
                 gemini_instruction = (
                     "If a user requests multiple things and you can only do a subset of them, "
@@ -76,15 +83,15 @@ class GeminiProvider(OpenAIProvider):
                     "role": "user" if msg.role == Role.USER else "assistant",
                     "content": msg.content or ""
                 })
-        
+
         return formatted_messages
-    
+
     def _get_chat_completion(self, messages: List[Message], model: str, params: ChatParameters) -> ModelResponse:
         """Get a basic chat completion with Gemini-specific handling"""
         try:
             # Map model name to Gemini format
             gemini_model = self.SUPPORTED_MODELS.get(model, model)
-            
+
             # Prepare request
             request = {
                 "model": gemini_model,
@@ -93,14 +100,14 @@ class GeminiProvider(OpenAIProvider):
                 "max_tokens": params.max_tokens,
                 "stream": params.stream
             }
-            
+
             if self.debug:
-                print(f"\nSending request to Gemini API:")
+                print("\nSending request to Gemini API:")
                 print(f"Model: {gemini_model}")
                 print(f"Messages: {json.dumps(request['messages'], indent=2)}")
-            
+
             response = self.client.chat.completions.create(**request)
-            
+
             return ModelResponse(
                 content=self._extract_content(response),
                 raw_response=response,
@@ -109,15 +116,15 @@ class GeminiProvider(OpenAIProvider):
             )
         except Exception as e:
             raise ProviderError(f"Gemini completion failed: {str(e)}")
-    
+
     def _extract_usage(self, response: Any) -> TokenUsage:
         """Extract token usage from Gemini response"""
         # Gemini might not provide detailed token counts
         try:
             return TokenUsage(
-                prompt_tokens=getattr(response.usage, 'prompt_tokens', 0),
-                completion_tokens=getattr(response.usage, 'completion_tokens', 0),
-                total_tokens=getattr(response.usage, 'total_tokens', 0)
+                prompt_tokens=getattr(response.usage, "prompt_tokens", 0),
+                completion_tokens=getattr(response.usage, "completion_tokens", 0),
+                total_tokens=getattr(response.usage, "total_tokens", 0)
             )
         except AttributeError:
             return TokenUsage(
@@ -125,7 +132,7 @@ class GeminiProvider(OpenAIProvider):
                 completion_tokens=0,
                 total_tokens=0
             )
-    
+
     def _get_tool_completion(
         self,
         messages: List[Message],
@@ -152,28 +159,28 @@ class GeminiProvider(OpenAIProvider):
             }
             for tool in tools
         ]
-        
+
         # Initialize conversation history
         current_messages = messages.copy()
         max_iterations = 5  # Prevent infinite loops
         iterations = 0
         last_response = None
-        
+
         while iterations < max_iterations:
             iterations += 1
-            
+
             # Format messages for this iteration
             formatted_messages = [
                 msg for msg in self._format_messages(current_messages)
-                if msg.get('content')
+                if msg.get("content")
             ]
-            
+
             if self.debug:
                 print(f"\nSending tool request to Gemini API (iteration {iterations}):")
                 print(f"Model: {gemini_model}")
                 print(f"Messages: {json.dumps(formatted_messages, indent=2)}")
                 print(f"Tools: {json.dumps(formatted_tools, indent=2)}")
-            
+
             response = self.client.chat.completions.create(
                 model=gemini_model,
                 messages=formatted_messages,
@@ -182,11 +189,11 @@ class GeminiProvider(OpenAIProvider):
                 temperature=temperature,
                 max_tokens=max_tokens,
             )
-            
+
             content = self._extract_content(response)
             tool_calls = self._extract_tool_calls(response)
             last_response = response
-            
+
             # Process tool calls if present
             if tool_calls:
                 for tool_call in tool_calls:
@@ -198,7 +205,7 @@ class GeminiProvider(OpenAIProvider):
                         try:
                             args = json.loads(tool_call["function"]["arguments"])
                             result = tool(**args)
-                            
+
                             # Add tool response to conversation
                             current_messages.append(Message(
                                 role=Role.TOOL,
@@ -216,9 +223,9 @@ class GeminiProvider(OpenAIProvider):
                     usage=self._extract_usage(last_response),
                     tool_calls=None
                 )
-        
+
         raise ProviderError("Exceeded maximum number of tool call iterations")
-        
+
     def _get_json_completion(
         self,
         messages: List[Message],
@@ -231,18 +238,18 @@ class GeminiProvider(OpenAIProvider):
         try:
             # Get generic JSON formatting prompt
             formatting_prompt = self._get_json_formatting_prompt(schema, messages[-1].content)
-            
+
             # Create messages for Gemini
             gemini_messages = [
                 {"role": "system", "content": formatting_prompt}
             ]
-            
+
             # Add remaining messages, skipping system
             gemini_messages.extend([
                 msg.model_dump() for msg in messages
                 if msg.role != Role.SYSTEM
             ])
-            
+
             response = self.client.beta.chat.completions.parse(
                 model=model,
                 messages=gemini_messages,
@@ -250,10 +257,10 @@ class GeminiProvider(OpenAIProvider):
                 temperature=temperature,
                 max_tokens=max_tokens
             )
-            
+
             # Convert parsed response to dict before JSON serialization
             parsed_dict = response.choices[0].message.parsed.model_dump()
-            
+
             return ModelResponse(
                 content=json.dumps(parsed_dict),
                 raw_response=response,

@@ -1,13 +1,14 @@
 import os
+from typing import List
+
 import pytest
 from dotenv import load_dotenv
-from typing import List, Dict, Any
 from pydantic import BaseModel
 
-from legion.interface.schemas import Message, Role, ProviderConfig, ModelResponse
-from legion.interface.tools import BaseTool
-from legion.providers.openai import OpenAIProvider, OpenAIFactory
 from legion.errors import ProviderError
+from legion.interface.schemas import Message, ModelResponse, ProviderConfig, Role
+from legion.interface.tools import BaseTool
+from legion.providers.openai import OpenAIFactory, OpenAIProvider
 
 # Load environment variables
 load_dotenv()
@@ -27,11 +28,11 @@ class SimpleTool(BaseTool):
             description="A simple test tool",
             parameters=SimpleToolParams
         )
-    
+
     def run(self, message: str) -> str:
         """Implement the sync run method"""
         return f"Tool response: {message}"
-    
+
     async def arun(self, message: str) -> str:
         """Implement the async run method"""
         return self.run(message)
@@ -128,7 +129,7 @@ def test_tool_and_json_completion(provider):
     assert response.tool_calls is not None
     assert len(response.tool_calls) > 0
     assert response.tool_calls[0]["function"]["name"] == "simple_tool"
-    
+
     # Verify JSON response
     data = TestSchema.model_validate_json(response.content)
     assert isinstance(data.name, str)
@@ -153,7 +154,7 @@ def test_invalid_api_key():
     config = ProviderConfig(api_key="invalid_key")
     provider = OpenAIProvider(config=config)
     messages = [Message(role=Role.USER, content="test")]
-    
+
     with pytest.raises(ProviderError):
         provider.complete(
             messages=messages,
@@ -162,7 +163,7 @@ def test_invalid_api_key():
 
 def test_invalid_model(provider):
     messages = [Message(role=Role.USER, content="test")]
-    
+
     with pytest.raises(ProviderError):
         provider.complete(
             messages=messages,

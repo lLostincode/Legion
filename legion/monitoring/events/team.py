@@ -1,14 +1,15 @@
 """Team-specific event types for Legion monitoring system"""
 
-from dataclasses import dataclass, field
-from typing import Dict, Any, Optional, List
-from uuid import UUID
+from dataclasses import dataclass
+from typing import Any, Dict, List, Optional
 
-from .base import Event, EventType, EventCategory, EventSeverity
+from .base import Event, EventCategory, EventSeverity, EventType
+
 
 @dataclass
 class TeamEvent(Event):
     """Base class for team-specific events"""
+
     def __init__(self, component_id: str, category: EventCategory, **kwargs):
         super().__init__(
             event_type=EventType.TEAM,
@@ -20,6 +21,7 @@ class TeamEvent(Event):
 @dataclass
 class TeamFormationEvent(TeamEvent):
     """Emitted when a team is created or modified"""
+
     def __init__(
         self,
         component_id: str,
@@ -42,6 +44,7 @@ class TeamFormationEvent(TeamEvent):
 @dataclass
 class TeamDelegationEvent(TeamEvent):
     """Emitted when a task is delegated to a team member"""
+
     def __init__(
         self,
         component_id: str,
@@ -68,6 +71,7 @@ class TeamDelegationEvent(TeamEvent):
 @dataclass
 class TeamLeadershipEvent(TeamEvent):
     """Emitted when a leader makes a strategic decision"""
+
     def __init__(
         self,
         component_id: str,
@@ -94,6 +98,7 @@ class TeamLeadershipEvent(TeamEvent):
 @dataclass
 class TeamCommunicationEvent(TeamEvent):
     """Emitted when team members communicate"""
+
     def __init__(
         self,
         component_id: str,
@@ -120,6 +125,7 @@ class TeamCommunicationEvent(TeamEvent):
 @dataclass
 class TeamCompletionEvent(TeamEvent):
     """Emitted when a team task is completed"""
+
     def __init__(
         self,
         component_id: str,
@@ -146,6 +152,7 @@ class TeamCompletionEvent(TeamEvent):
 @dataclass
 class TeamPerformanceEvent(TeamEvent):
     """Emitted to track team performance metrics"""
+
     def __init__(
         self,
         component_id: str,
@@ -170,6 +177,7 @@ class TeamPerformanceEvent(TeamEvent):
 @dataclass
 class TeamStateChangeEvent(TeamEvent):
     """Emitted when team structure or state changes"""
+
     def __init__(
         self,
         component_id: str,
@@ -196,6 +204,7 @@ class TeamStateChangeEvent(TeamEvent):
 @dataclass
 class TeamErrorEvent(TeamEvent):
     """Emitted when team coordination fails"""
+
     def __init__(
         self,
         component_id: str,
@@ -218,4 +227,4 @@ class TeamErrorEvent(TeamEvent):
                 "traceback": traceback
             },
             **kwargs
-        ) 
+        )

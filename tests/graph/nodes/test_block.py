@@ -1,24 +1,28 @@
+from typing import Any, Dict
+
 import pytest
-from typing import Dict, Any, List
 from pydantic import BaseModel, ConfigDict
 
-from legion.blocks.base import FunctionalBlock, BlockMetadata
+from legion.blocks.base import BlockMetadata, FunctionalBlock
 from legion.graph.nodes.block import BlockNode
 from legion.graph.state import GraphState
 
+
 class TestInput(BaseModel):
     """Test input schema"""
+
     value: str
-    
+
     model_config = ConfigDict(
         json_encoders=None
     )
 
 class TestOutput(BaseModel):
     """Test output schema"""
+
     result: str
     metadata: Dict[str, Any]
-    
+
     model_config = ConfigDict(
         json_encoders=None
     )
@@ -62,7 +66,7 @@ async def test_block_node_initialization(block_node, test_block):
     assert block_node.block is test_block
     assert block_node.get_input_channel("input") is not None
     assert block_node.get_output_channel("output") is not None
-    
+
     # Verify channel type hints
     input_channel = block_node.get_input_channel("input")
     output_channel = block_node.get_output_channel("output")
@@ -76,10 +80,10 @@ async def test_block_node_execution(block_node):
     input_channel = block_node.get_input_channel("input")
     input_data = TestInput(value="test")
     input_channel.set(input_data)
-    
+
     # Execute node
     result = await block_node.execute()
-    
+
     # Verify output
     assert result is not None
     assert "output" in result
@@ -87,7 +91,7 @@ async def test_block_node_execution(block_node):
     assert isinstance(output, TestOutput)
     assert output.result == "Processed: test"
     assert output.metadata["source"] == "test"
-    
+
     # Check output channel
     output_channel = block_node.get_output_channel("output")
     channel_output = output_channel.get()
@@ -108,16 +112,16 @@ async def test_block_node_checkpointing(block_node, test_block):
     input_data = TestInput(value="test")
     input_channel.set(input_data)
     await block_node.execute()
-    
+
     # Create checkpoint
     checkpoint = block_node.checkpoint()
-    
+
     # Verify checkpoint contents
     assert "block_metadata" in checkpoint
     assert checkpoint["block_metadata"]["name"] == "test_block"
     assert checkpoint["block_validate"] == test_block.validate
     assert "validate_types" in checkpoint
-    
+
     # Create new node and restore
     new_node = BlockNode(
         graph_state=block_node._graph_state,
@@ -132,7 +136,7 @@ async def test_block_node_checkpointing(block_node, test_block):
         )
     )
     new_node.restore(checkpoint)
-    
+
     # Verify restored state
     assert new_node.block.metadata.name == block_node.block.metadata.name
     assert new_node.block.validate == block_node.block.validate
@@ -148,7 +152,7 @@ async def test_block_node_custom_type_hints(graph_state, test_block):
         input_channel_type=Dict[str, Any],
         output_channel_type=Dict[str, Any]
     )
-    
+
     # Verify channel type hints
     input_channel = node.get_input_channel("input")
     output_channel = node.get_output_channel("output")
@@ -163,18 +167,18 @@ async def test_block_node_type_validation(graph_state, test_block):
         block=test_block,
         validate_types=True
     )
-    
+
     # Test valid input
     input_channel = node.get_input_channel("input")
     input_data = TestInput(value="test")
     input_channel.set(input_data)
     result = await node.execute()
     assert result is not None
-    
+
     # Test invalid input type
     with pytest.raises(TypeError):
         input_channel.set({"invalid": "input"})
-    
+
     # Test invalid input data
     with pytest.raises(TypeError):
         input_channel.set({"value": 123})  # Wrong type for value field
@@ -187,16 +191,16 @@ async def test_block_node_validation_context(graph_state, test_block):
         block=test_block,
         input_channel_type=TestInput  # Use correct type
     )
-    
+
     # Check validation warnings
     validation = await node.validate()
     assert len(validation.warnings) == 0  # No warnings with correct type
-    
+
     # Check validation after error
     input_channel = node.get_input_channel("input")
     with pytest.raises(TypeError):
         input_channel.set({"invalid": "input"})  # Invalid input structure
-    
+
     # Verify validation context
     validation = await node.validate()
     assert len(validation.warnings) == 0  # Still no warnings
@@ -207,7 +211,7 @@ async def test_block_node_type_coercion(graph_state):
     # Create a block with Dict input/output
     def dict_block(data: Dict[str, str]) -> Dict[str, str]:
         return {"result": data["value"]}
-    
+
     block = FunctionalBlock(
         func=dict_block,
         metadata=BlockMetadata(
@@ -217,14 +221,14 @@ async def test_block_node_type_coercion(graph_state):
             output_schema=None
         )
     )
-    
+
     node = BlockNode(
         graph_state=graph_state,
         block=block,
         input_channel_type=Dict[str, str],
         validate_types=True
     )
-    
+
     # Test with dict input
     input_channel = node.get_input_channel("input")
     input_data = {"value": "test"}

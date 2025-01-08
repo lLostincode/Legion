@@ -1,15 +1,10 @@
-from .base import (
-    FunctionalBlock,
-    BlockMetadata,
-    BlockError,
-    ValidationError
-)
+from .base import BlockError, BlockMetadata, FunctionalBlock, ValidationError
 from .decorators import block
 
 __all__ = [
-    'FunctionalBlock',
-    'BlockMetadata',
-    'BlockError',
-    'ValidationError',
-    'block'
-] 
+    "FunctionalBlock",
+    "BlockMetadata",
+    "BlockError",
+    "ValidationError",
+    "block"
+]
