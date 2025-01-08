@@ -39,29 +39,48 @@ We follow PEP 8 guidelines for Python code style. Key points:
 - Maximum line length of 79 characters for code, 72 for docstrings
 - Use meaningful variable names
 - Add docstrings to all functions, classes, and modules
+- Use comprehensive type hints
+
+### Type Checking
+We use mypy for static type checking. Key requirements:
+- All functions must have complete type hints
+- All class attributes must be typed
+- Use `Optional[T]` instead of `T | None`
+- Use `Sequence[T]` for read-only lists
+- Use `Mapping[K, V]` for read-only dicts
+- Avoid `Any` unless absolutely necessary
+- Run type checks before submitting PRs
 
 ### Before Submitting
 1. Run tests: 
 ```bash
 # Run all tests except integration tests
-# NOTE: Unless integration tests are needed, this is perfectly fine
 pytest -v -m "not integration"
 
 # Run only integration tests
-# NOTE: Integration tests require a valid API key for the providers they are testing (usually OpenAI + gpt-4o-mini)
 pytest -v -m integration
 
 # Run all tests
 pytest -v
 ```
 
-2. Update documentation if needed
-3. Add tests for new features
-4. Ensure your branch is up to date:
-   ```bash
-   git fetch upstream
-   git rebase upstream/main
-   ```
+2. Run type checking:
+```bash
+# Run mypy type checker
+python scripts/typecheck.py
+
+# Check specific modules
+python scripts/typecheck.py legion/agents legion/blocks
+```
+
+3. Run code style checks:
+```bash
+# Run ruff linter
+python scripts/lint.py
+```
+
+4. Update documentation if needed
+5. Add tests for new features
 
 ## Pull Request Process
 
