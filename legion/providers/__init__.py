@@ -1,17 +1,17 @@
 """Provider registry and factory functions"""
 
-from typing import Dict, List, Type, Optional
+from typing import Dict, List, Optional, Type
 
 from ..interface.base import LLMInterface
 from ..interface.schemas import ProviderConfig
+from .anthropic import AnthropicFactory
 from .factory import ProviderFactory
+from .gemini import GeminiFactory
+from .groq import GroqFactory
+from .ollama import OllamaFactory
 
 # Import provider implementations
-from .openai import OpenAIProvider, OpenAIFactory
-from .anthropic import AnthropicProvider, AnthropicFactory
-from .groq import GroqProvider, GroqFactory
-from .ollama import OllamaProvider, OllamaFactory
-from .gemini import GeminiProvider, GeminiFactory
+from .openai import OpenAIFactory
 
 # Registry of provider factories
 PROVIDER_FACTORIES: Dict[str, Type[ProviderFactory]] = {
@@ -27,25 +27,28 @@ def get_provider(
     config: Optional[ProviderConfig] = None,
     **kwargs
 ) -> LLMInterface:
-    """
-    Get an instance of a provider by name using the factory pattern
-    
+    """Get an instance of a provider by name using the factory pattern
+
     Args:
+    ----
         name: Name of the provider
         config: Provider configuration
         **kwargs: Additional provider-specific arguments
-        
+
     Returns:
+    -------
         Configured provider instance
-    
+
     Raises:
+    ------
         ValueError: If provider name is not recognized
+
     """
     if name not in PROVIDER_FACTORIES:
         raise ValueError(
             f"Unknown provider '{name}'. Available providers: {list(PROVIDER_FACTORIES.keys())}"
         )
-    
+
     factory = PROVIDER_FACTORIES[name]()
     return factory.create_provider(config=config, **kwargs)
 

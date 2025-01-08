@@ -14,9 +14,13 @@ import asyncio
 import json
 import os
 from typing import Dict, List
-from pydantic import BaseModel
 
 from dotenv import load_dotenv
+from pydantic import BaseModel
+
+from legion.agents.decorators import agent
+from legion.blocks.decorators import block
+from legion.groups.decorators import chain
 
 load_dotenv()
 
@@ -27,31 +31,32 @@ if not os.getenv("OPENAI_API_KEY"):
     print("    export OPENAI_API_KEY=your_api_key_here")
     exit(1)
 
-from legion.agents.decorators import agent
-from legion.blocks.decorators import block
-from legion.groups.decorators import chain
 
 # Output schemas for validation
 class NormalizedText(BaseModel):
-    """Schema for normalized text output"""
+    """Schema for normalized text output."""
+
     text: str
     char_count: int
     word_count: int
 
+
 class TextMetrics(BaseModel):
-    """Schema for text metrics output"""
+    """Schema for text metrics output."""
+
     sentence_count: int
     avg_sentence_length: float
     key_phrases: List[str]
 
+
 @block(output_schema=NormalizedText)
 def normalize_text(text: str) -> Dict:
-    """Block that normalizes text by cleaning whitespace and counting stats"""
+    """Block that normalizes text by cleaning whitespace and counting stats."""
     print("\nNormalize Block Input:", text[:100], "...")
-    
+
     # Remove extra whitespace and normalize line endings
-    cleaned = ' '.join(text.split())
-    
+    cleaned = " ".join(text.split())
+
     result = {
         "text": cleaned,
         "char_count": len(cleaned),
@@ -60,39 +65,43 @@ def normalize_text(text: str) -> Dict:
     print("Normalize Block Output:", result)
     return result
 
+
 @agent(
     model="openai:gpt-4o-mini",
     temperature=0.0,
     max_tokens=1000,
 )
 class Summarizer:
-    """You are a text summarization expert. Your role is to create clear, 
-            concise summaries that capture the key points while maintaining readability.
-            Focus on extracting the most important information and presenting it in a 
-            well-structured format.
-            
-            Your output should be a concise summary that:
-            1. Captures the main ideas
-            2. Preserves key terminology
-            3. Uses clear, direct language
-            4. Is roughly 1/3 the length of the input"""
+    """Text summarization expert creating clear, concise summaries.
+
+    Focus on extracting the most important information and presenting it in a
+    well-structured format.
+
+    Output should be a concise summary that:
+    1. Captures the main ideas
+    2. Preserves key terminology
+    3. Uses clear, direct language
+    4. Is roughly 1/3 the length of the input
+    """
+
     pass
+
 
 @block(output_schema=TextMetrics)
 def extract_metrics(text: str) -> Dict:
-    """Block that extracts key metrics from text"""
+    """Block that extracts key metrics from text."""
     print("\nMetrics Block Input:", text[:100], "...")
-    
-    sentences = [s.strip() for s in text.split('.') if s.strip()]
+
+    sentences = [s.strip() for s in text.split(".") if s.strip()]
     words = text.split()
-    
+
     # Extract key phrases (simple implementation)
     key_phrases = []
     for i in range(len(words) - 2):
-        phrase = ' '.join(words[i:i+3])
-        if any(w[0].isupper() for w in words[i:i+3]):
+        phrase = " ".join(words[i:i + 3])
+        if any(w[0].isupper() for w in words[i:i + 3]):
             key_phrases.append(phrase)
-    
+
     result = {
         "sentence_count": len(sentences),
         "avg_sentence_length": len(words) / len(sentences) if sentences else 0,
@@ -101,10 +110,11 @@ def extract_metrics(text: str) -> Dict:
     print("Metrics Block Output:", result)
     return result
 
+
 @chain
 class TextProcessor:
-    """Chain that processes text through normalization, summarization, and metrics extraction"""
-    
+    """Chain that processes text through normalization, summarization, and metrics."""
+
     # Define chain members in processing order
     members = [
         normalize_text,  # First normalize the text
@@ -112,10 +122,11 @@ class TextProcessor:
         extract_metrics  # Finally extract metrics from the summary
     ]
 
+
 async def main():
     # Create chain instance
     processor = TextProcessor(verbose=True)
-    
+
     # Sample text to process
     text = """
     Artificial Intelligence (AI) has transformed many industries in recent years.
@@ -124,15 +135,16 @@ async def main():
     Deep Learning architectures have revolutionized computer vision and speech recognition.
     The future of AI looks promising, with new breakthroughs happening regularly.
     """
-    
+
     # Process the text through the chain
     result = await processor.aprocess(text)
     metrics = json.loads(result.content)
-    
+
     print("\nFinal Output:")
     print("Key Phrases:", metrics["key_phrases"])
     print(f"Sentence Count: {metrics['sentence_count']}")
     print(f"Average Sentence Length: {metrics['avg_sentence_length']:.1f} words")
 
+
 if __name__ == "__main__":
-    asyncio.run(main()) 
+    asyncio.run(main())

@@ -1,14 +1,15 @@
 """Agent-specific event types for Legion monitoring system"""
 
-from dataclasses import dataclass, field
-from typing import Dict, Any, Optional, List
-from uuid import UUID
+from dataclasses import dataclass
+from typing import Any, Dict, List, Optional
 
-from .base import Event, EventType, EventCategory, EventSeverity
+from .base import Event, EventCategory, EventSeverity, EventType
+
 
 @dataclass
 class AgentEvent(Event):
     """Base class for agent-specific events"""
+
     def __init__(self, component_id: str, category: EventCategory, **kwargs):
         super().__init__(
             event_type=EventType.AGENT,
@@ -20,6 +21,7 @@ class AgentEvent(Event):
 @dataclass
 class AgentStartEvent(AgentEvent):
     """Emitted when an agent starts up"""
+
     def __init__(
         self,
         component_id: str,
@@ -42,6 +44,7 @@ class AgentStartEvent(AgentEvent):
 @dataclass
 class AgentProcessingEvent(AgentEvent):
     """Emitted during agent message processing"""
+
     def __init__(
         self,
         component_id: str,
@@ -68,6 +71,7 @@ class AgentProcessingEvent(AgentEvent):
 @dataclass
 class AgentDecisionEvent(AgentEvent):
     """Emitted when an agent makes a decision"""
+
     def __init__(
         self,
         component_id: str,
@@ -98,6 +102,7 @@ class AgentDecisionEvent(AgentEvent):
 @dataclass
 class AgentToolUseEvent(AgentEvent):
     """Emitted when an agent uses a tool"""
+
     def __init__(
         self,
         component_id: str,
@@ -128,6 +133,7 @@ class AgentToolUseEvent(AgentEvent):
 @dataclass
 class AgentMemoryEvent(AgentEvent):
     """Emitted when an agent interacts with memory"""
+
     def __init__(
         self,
         component_id: str,
@@ -158,6 +164,7 @@ class AgentMemoryEvent(AgentEvent):
 @dataclass
 class AgentResponseEvent(AgentEvent):
     """Emitted when an agent generates a response"""
+
     def __init__(
         self,
         component_id: str,
@@ -184,6 +191,7 @@ class AgentResponseEvent(AgentEvent):
 @dataclass
 class AgentErrorEvent(AgentEvent):
     """Emitted when an agent encounters an error"""
+
     def __init__(
         self,
         component_id: str,
@@ -215,6 +223,7 @@ class AgentErrorEvent(AgentEvent):
 @dataclass
 class AgentStateChangeEvent(AgentEvent):
     """Emitted when an agent's state changes"""
+
     def __init__(
         self,
         component_id: str,
@@ -240,4 +249,4 @@ class AgentStateChangeEvent(AgentEvent):
                 "change_type": change_type
             },
             **kwargs
-        ) 
+        )

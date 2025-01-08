@@ -1,15 +1,16 @@
 """Chain-specific event types for Legion monitoring system"""
 
-from dataclasses import dataclass, field
-from typing import Dict, Any, Optional, List, Union
-from uuid import UUID
+from dataclasses import dataclass
+from typing import Any, Dict, Optional, Union
 
-from .base import Event, EventType, EventCategory, EventSeverity
 from ...interface.schemas import Message
+from .base import Event, EventCategory, EventSeverity, EventType
+
 
 @dataclass
 class ChainEvent(Event):
     """Base class for chain-specific events"""
+
     def __init__(self, component_id: str, category: EventCategory, **kwargs):
         super().__init__(
             event_type=EventType.CHAIN,
@@ -21,6 +22,7 @@ class ChainEvent(Event):
 @dataclass
 class ChainStartEvent(ChainEvent):
     """Emitted when a chain starts processing"""
+
     def __init__(
         self,
         component_id: str,
@@ -41,6 +43,7 @@ class ChainStartEvent(ChainEvent):
 @dataclass
 class ChainStepEvent(ChainEvent):
     """Emitted when a chain step starts processing"""
+
     def __init__(
         self,
         component_id: str,
@@ -65,6 +68,7 @@ class ChainStepEvent(ChainEvent):
 @dataclass
 class ChainTransformEvent(ChainEvent):
     """Emitted when data is transformed between chain steps"""
+
     def __init__(
         self,
         component_id: str,
@@ -91,6 +95,7 @@ class ChainTransformEvent(ChainEvent):
 @dataclass
 class ChainCompletionEvent(ChainEvent):
     """Emitted when a chain completes processing"""
+
     def __init__(
         self,
         component_id: str,
@@ -115,6 +120,7 @@ class ChainCompletionEvent(ChainEvent):
 @dataclass
 class ChainErrorEvent(ChainEvent):
     """Emitted when a chain encounters an error"""
+
     def __init__(
         self,
         component_id: str,
@@ -142,6 +148,7 @@ class ChainErrorEvent(ChainEvent):
 @dataclass
 class ChainStateChangeEvent(ChainEvent):
     """Emitted when chain configuration or state changes"""
+
     def __init__(
         self,
         component_id: str,
@@ -166,6 +173,7 @@ class ChainStateChangeEvent(ChainEvent):
 @dataclass
 class ChainBottleneckEvent(ChainEvent):
     """Emitted when a potential bottleneck is detected in the chain"""
+
     def __init__(
         self,
         component_id: str,
@@ -189,4 +197,4 @@ class ChainBottleneckEvent(ChainEvent):
                 "slowdown_factor": processing_time_ms / average_time_ms
             },
             **kwargs
-        ) 
+        )

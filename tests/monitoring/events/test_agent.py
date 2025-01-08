@@ -1,21 +1,23 @@
 """Tests for agent-specific events"""
 
-import pytest
 from datetime import datetime, timezone
 from uuid import uuid4
 
-from legion.monitoring.events.base import Event
+import pytest
+
 from legion.monitoring.events.agent import (
-    AgentEvent,
-    AgentStartEvent,
-    AgentProcessingEvent,
     AgentDecisionEvent,
-    AgentToolUseEvent,
-    AgentMemoryEvent,
-    AgentResponseEvent,
     AgentErrorEvent,
-    AgentStateChangeEvent
+    AgentEvent,
+    AgentMemoryEvent,
+    AgentProcessingEvent,
+    AgentResponseEvent,
+    AgentStartEvent,
+    AgentStateChangeEvent,
+    AgentToolUseEvent,
 )
+from legion.monitoring.events.base import Event
+
 
 def test_agent_start_event():
     """Test agent start event creation"""
@@ -25,7 +27,7 @@ def test_agent_start_event():
         provider_name="openai",
         model_name="gpt-4o-mini"
     )
-    
+
     assert event.provider_name == "openai"
     assert event.model_name == "gpt-4o-mini"
     assert event.metadata["system_prompt"] == "Test prompt"
@@ -40,7 +42,7 @@ def test_agent_processing_event():
         provider_name="openai",
         model_name="gpt-4o-mini"
     )
-    
+
     assert event.tokens_used == 100
     assert event.cost == 0.002
     assert event.provider_name == "openai"
@@ -59,7 +61,7 @@ def test_agent_decision_event():
         provider_name="openai",
         model_name="gpt-4o-mini"
     )
-    
+
     assert event.tokens_used == 50
     assert event.cost == 0.001
     assert event.provider_name == "openai"
@@ -80,7 +82,7 @@ def test_agent_tool_use_event():
         provider_name="openai",
         model_name="gpt-4o-mini"
     )
-    
+
     assert event.tokens_used == 75
     assert event.cost == 0.0015
     assert event.provider_name == "openai"
@@ -101,7 +103,7 @@ def test_agent_memory_event():
         provider_name="openai",
         model_name="gpt-4o-mini"
     )
-    
+
     assert event.tokens_used == 30
     assert event.cost == 0.0006
     assert event.provider_name == "openai"
@@ -120,7 +122,7 @@ def test_agent_response_event():
         provider_name="openai",
         model_name="gpt-4o-mini"
     )
-    
+
     assert event.tokens_used == 150
     assert event.cost == 0.003
     assert event.provider_name == "openai"
@@ -139,7 +141,7 @@ def test_agent_error_event():
         provider_name="openai",
         model_name="gpt-4o-mini"
     )
-    
+
     assert event.tokens_used == 25
     assert event.cost == 0.0005
     assert event.provider_name == "openai"
@@ -152,7 +154,7 @@ def test_agent_state_change_event():
     """Test agent state change event creation"""
     old_state = {"value": 1}
     new_state = {"value": 2}
-    
+
     event = AgentStateChangeEvent(
         component_id="test_agent",
         old_state=old_state,
@@ -163,7 +165,7 @@ def test_agent_state_change_event():
         provider_name="openai",
         model_name="gpt-4o-mini"
     )
-    
+
     assert event.tokens_used == 40
     assert event.cost == 0.0008
     assert event.provider_name == "openai"
@@ -178,7 +180,7 @@ def test_event_inheritance():
         component_id="test_agent",
         system_prompt="Test prompt"
     )
-    
+
     assert isinstance(event, AgentEvent)
     assert isinstance(event, Event)
     assert hasattr(event, "id")
@@ -193,7 +195,7 @@ def test_event_timing():
         input_message="Test",
         duration_ms=100.0
     )
-    
+
     assert event.timestamp >= start_time
     assert event.duration_ms == 100.0
 
@@ -205,9 +207,9 @@ def test_event_parent_child_relationship():
         response="Test",
         parent_event_id=parent_id
     )
-    
+
     assert event.parent_event_id == parent_id
     assert parent_id in event.trace_path
 
 if __name__ == "__main__":
-    pytest.main([__file__, "-v"]) 
+    pytest.main([__file__, "-v"])

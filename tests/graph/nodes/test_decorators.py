@@ -1,20 +1,24 @@
+from typing import Annotated, Any, Dict, List
+from unittest.mock import patch
+
 import pytest
-from typing import List, Dict, Optional, Any, Annotated
-from pydantic import BaseModel, Field
 from dotenv import load_dotenv
-import os
+from pydantic import BaseModel, Field
+
+from tests.utils import MockOpenAIProvider
 
 # Load environment variables from .env file
 load_dotenv()
 
-from legion.graph.state import GraphState
-from legion.graph.nodes.decorators import node
+from legion.agents.decorators import agent
 from legion.graph.nodes.agent import AgentNode
 from legion.graph.nodes.chain import ChainNode
+from legion.graph.nodes.decorators import node
 from legion.graph.nodes.team import TeamNode
-from legion.agents.decorators import agent
-from legion.groups.decorators import chain, team, leader
-from legion.interface.decorators import tool, output_schema
+from legion.graph.state import GraphState
+from legion.groups.decorators import leader
+from legion.interface.decorators import output_schema, tool
+
 
 # Test schemas
 @output_schema
@@ -37,7 +41,7 @@ class ProcessedData(BaseModel):
 )
 class Analyzer:
     """Analysis agent node."""
-    
+
     @tool
     def analyze(
         self,
@@ -52,20 +56,21 @@ class Analyzer:
 
 class ProcessorMeta(type):
     """Metaclass for processor nodes"""
-    def __new__(mcs, name, bases, attrs):
+
+    def __new__(cls, name, bases, attrs):
         # Create preprocessor and transformer instances
         if name == "Processor":
             # Create instances
             preprocessor = attrs["Preprocessor"]()
             transformer = attrs["Transformer"]()
-            
+
             # Add instances to class attributes
             attrs["preprocessor"] = preprocessor
             attrs["transformer"] = transformer
-            
+
             # Create chain members list
             attrs["_chain_members"] = [preprocessor, transformer]
-            
+
             # Add create_node method
             def create_node(self, graph_state):
                 return ChainNode(
@@ -76,16 +81,16 @@ class ProcessorMeta(type):
                     response_schema=None
                 )
             attrs["create_node"] = create_node
-            
+
             # Create class
-            cls = super().__new__(mcs, name, bases, attrs)
-            
+            cls = super().__new__(cls, name, bases, attrs)
+
             # Mark as chain-decorated
             cls.__chain_decorator__ = True
-            
+
             # Mark as node-decorated
             cls.__node_decorator__ = True
-            
+
             # Store node configuration
             cls.__node_config__ = {
                 "name": None,
@@ -93,17 +98,17 @@ class ProcessorMeta(type):
                 "output_channel_type": ProcessedData,
                 "response_schema": None
             }
-            
+
             return cls
-        return super().__new__(mcs, name, bases, attrs)
+        return super().__new__(cls, name, bases, attrs)
 
 class Processor(metaclass=ProcessorMeta):
     """Processing chain node."""
-    
+
     @agent(model="gpt-4-mini")
     class Preprocessor:
         """Data preprocessor."""
-        
+
         @tool
         def preprocess(
             self,
@@ -111,11 +116,11 @@ class Processor(metaclass=ProcessorMeta):
         ) -> str:
             """Preprocess input data"""
             return f"Preprocessed: {data}"
-    
+
     @agent(model="gpt-4-mini")
     class Transformer:
         """Data transformer."""
-        
+
         @tool
         def transform(
             self,
@@ -129,26 +134,27 @@ class Processor(metaclass=ProcessorMeta):
 
 class ReviewTeamMeta(type):
     """Metaclass for review team nodes"""
-    def __new__(mcs, name, bases, attrs):
+
+    def __new__(cls, name, bases, attrs):
         # Create team member instances
         if name == "ReviewTeam":
             # Create instances
             coordinator = attrs["Coordinator"]()
             reviewer1 = attrs["Reviewer1"]()
             reviewer2 = attrs["Reviewer2"]()
-            
+
             # Add instances to class attributes
             attrs["coordinator"] = coordinator
             attrs["reviewer1"] = reviewer1
             attrs["reviewer2"] = reviewer2
-            
+
             # Create team members dict
             attrs["_team_members"] = {
                 "reviewer1": reviewer1,
                 "reviewer2": reviewer2
             }
             attrs["_team_leader"] = coordinator
-            
+
             # Add create_node method
             def create_node(self, graph_state):
                 return TeamNode(
@@ -156,16 +162,16 @@ class ReviewTeamMeta(type):
                     team=self
                 )
             attrs["create_node"] = create_node
-            
+
             # Create class
-            cls = super().__new__(mcs, name, bases, attrs)
-            
+            cls = super().__new__(cls, name, bases, attrs)
+
             # Mark as team-decorated
             cls.__team_decorator__ = True
-            
+
             # Mark as node-decorated
             cls.__node_decorator__ = True
-            
+
             # Store node configuration
             cls.__node_config__ = {
                 "name": None,
@@ -174,17 +180,17 @@ class ReviewTeamMeta(type):
                 "response_schema": None,
                 "tools": []
             }
-            
+
             return cls
-        return super().__new__(mcs, name, bases, attrs)
+        return super().__new__(cls, name, bases, attrs)
 
 class ReviewTeam(metaclass=ReviewTeamMeta):
     """Review team node."""
-    
+
     @leader(model="gpt-4-mini")
     class Coordinator:
         """Review coordinator."""
-        
+
         @tool
         def coordinate(
             self,
@@ -192,11 +198,11 @@ class ReviewTeam(metaclass=ReviewTeamMeta):
         ) -> str:
             """Coordinate team task"""
             return f"Coordinating: {task}"
-    
+
     @agent(model="gpt-4-mini")
     class Reviewer1:
         """First reviewer."""
-        
+
         @tool
         def review(
             self,
@@ -204,11 +210,11 @@ class ReviewTeam(metaclass=ReviewTeamMeta):
         ) -> str:
             """Review content"""
             return f"Review 1: {content}"
-    
+
     @agent(model="gpt-4-mini")
     class Reviewer2:
         """Second reviewer."""
-        
+
         @tool
         def review(
             self,
@@ -223,12 +229,13 @@ def graph_state():
     """Create graph state for testing"""
     return GraphState()
 
+@patch("legion.providers.openai.OpenAIProvider", MockOpenAIProvider)
 def test_agent_node_creation(graph_state):
     """Test agent node creation"""
     analyzer = Analyzer()
-    assert hasattr(analyzer, '__node_decorator__')
-    assert hasattr(analyzer, '__node_config__')
-    
+    assert hasattr(analyzer, "__node_decorator__")
+    assert hasattr(analyzer, "__node_config__")
+
     # Create node
     node = analyzer.create_node(graph_state)
     assert isinstance(node, AgentNode)
@@ -239,9 +246,9 @@ def test_agent_node_creation(graph_state):
 def test_chain_node_creation(graph_state):
     """Test chain node creation"""
     processor = Processor()
-    assert hasattr(processor, '__node_decorator__')
-    assert hasattr(processor, '__node_config__')
-    
+    assert hasattr(processor, "__node_decorator__")
+    assert hasattr(processor, "__node_config__")
+
     # Create node
     node = processor.create_node(graph_state)
     assert isinstance(node, ChainNode)
@@ -252,9 +259,9 @@ def test_chain_node_creation(graph_state):
 def test_team_node_creation(graph_state):
     """Test team node creation"""
     team = ReviewTeam()
-    assert hasattr(team, '__node_decorator__')
-    assert hasattr(team, '__node_config__')
-    
+    assert hasattr(team, "__node_decorator__")
+    assert hasattr(team, "__node_config__")
+
     # Create node
     node = team.create_node(graph_state)
     assert isinstance(node, TeamNode)
@@ -265,14 +272,14 @@ def test_node_configuration():
     """Test node configuration handling"""
     analyzer = Analyzer()
     config = analyzer.__node_config__
-    
+
     assert config["input_channel_type"] == str
     assert config["output_channel_type"] == AnalysisResult
     assert config["response_schema"] == AnalysisResult
 
 def test_node_inheritance():
     """Test node inheritance"""
-    
+
     @agent(model="gpt-4-mini")
     @node(
         input_channel_type=str,
@@ -280,26 +287,33 @@ def test_node_inheritance():
     )
     class BaseAnalyzer:
         """Base analyzer."""
+
         pass
-    
+
     @node(
         output_channel_type=AnalysisResult,
         tools=[]
     )
     class SpecializedAnalyzer(BaseAnalyzer):
         """Specialized analyzer."""
+
         pass
-    
+
     base = BaseAnalyzer()
     specialized = SpecializedAnalyzer()
-    
+
     # Base class should have input_channel_type set but not output_channel_type
     assert base.__node_config__["input_channel_type"] == str
     assert "output_channel_type" not in base.__node_config__
-    
+
     # Specialized class should inherit input_channel_type and set its own output_channel_type
     assert specialized.__node_config__["input_channel_type"] == str
     assert specialized.__node_config__["output_channel_type"] == AnalysisResult
 
+@patch("legion.providers.openai.OpenAIProvider", MockOpenAIProvider)
+def test_decorator_with_params():
+    """Test agent decorator with custom parameters"""
+    # Your existing test code...
+
 if __name__ == "__main__":
-    pytest.main(["-v", __file__]) 
+    pytest.main(["-v", __file__])

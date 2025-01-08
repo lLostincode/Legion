@@ -1,20 +1,20 @@
-from typing import Optional, Type, Dict, Any, List, Union, get_type_hints
-from functools import wraps
-import inspect
-from pydantic import BaseModel, Field
+from typing import Any, Optional, Type
 
-from ..state import GraphState
-from .base import NodeBase
-from .agent import AgentNode
-from .chain import ChainNode
-from .team import TeamNode
+from pydantic import BaseModel
+
 from ...agents.base import Agent
 from ...groups.chain import Chain
 from ...groups.team import Team
+from ..state import GraphState
+from .agent import AgentNode
+from .base import NodeBase
+from .chain import ChainNode
+from .team import TeamNode
+
 
 class NodeDecorator:
     """Decorator for creating graph nodes"""
-    
+
     def __init__(
         self,
         name: Optional[str] = None,
@@ -28,14 +28,14 @@ class NodeDecorator:
         self.output_channel_type = output_channel_type
         self.response_schema = response_schema
         self.kwargs = kwargs
-    
+
     def __call__(self, cls):
         # Get parent class configuration if it exists
         parent_config = {}
         for base in cls.__bases__:
-            if hasattr(base, '__node_config__'):
+            if hasattr(base, "__node_config__"):
                 parent_config.update(base.__node_config__)
-        
+
         # Create new configuration by merging parent config with current config
         current_config = {
             "name": self.name or cls.__name__,
@@ -44,35 +44,35 @@ class NodeDecorator:
             "response_schema": self.response_schema,
             **self.kwargs
         }
-        
+
         # Remove None values from current config
         current_config = {k: v for k, v in current_config.items() if v is not None}
-        
+
         # Merge configurations, giving precedence to current config
         merged_config = {**parent_config, **current_config}
-        
+
         # Store node configuration on original class
         cls.__node_decorator__ = True
         cls.__node_config__ = merged_config
-        
+
         # Create wrapper class that inherits from original class
         class NodeClass(cls):
             """Node wrapper class"""
-            
+
             def __init__(self, *args, **kwargs):
                 # Initialize original class
                 cls.__init__(self, *args, **kwargs)
-                
+
                 # Store configuration
                 self.__node_config__ = merged_config
-                
+
                 # Mark as node-decorated
                 self.__node_decorator__ = True
-            
+
             def create_node(self, graph_state: GraphState) -> NodeBase:
                 """Create a graph node from this instance"""
                 config = self.__node_config__
-                
+
                 # Determine node type based on instance type
                 if isinstance(self, Agent):
                     return AgentNode(
@@ -99,14 +99,14 @@ class NodeDecorator:
                     )
                 else:
                     raise ValueError(f"Unsupported node type: {type(self)}")
-        
+
         # Copy class attributes
-        for attr in ['__module__', '__name__', '__qualname__', '__doc__', '__annotations__']:
+        for attr in ["__module__", "__name__", "__qualname__", "__doc__", "__annotations__"]:
             try:
                 setattr(NodeClass, attr, getattr(cls, attr))
             except AttributeError:
                 pass
-        
+
         return NodeClass
 
 # Create decorator function
@@ -118,15 +118,17 @@ def node(
     **kwargs
 ):
     """Decorator for creating graph nodes
-    
+
     Args:
+    ----
         name: Optional node name
         input_channel_type: Optional type hint for input channel
         output_channel_type: Optional type hint for output channel
         response_schema: Optional pydantic model for response validation
         **kwargs: Additional node parameters
-        
+
     Example:
+    -------
         @node(
             input_channel_type=str,
             output_channel_type=AnalysisResult,
@@ -135,6 +137,7 @@ def node(
         @agent(model="gpt-4")
         class Analyzer:
             '''Analyzes input data.'''
+
     """
     if isinstance(name, type):
         # @node used without parameters
@@ -146,4 +149,4 @@ def node(
         output_channel_type=output_channel_type,
         response_schema=response_schema,
         **kwargs
-    ) 
+    )

@@ -1,38 +1,39 @@
 # File: llm_kit/providers/openai.py
 
-from typing import List, Dict, Any, Optional, Sequence, Type
 import json
-from openai import OpenAI, AsyncOpenAI
+from typing import Any, Dict, List, Optional, Sequence, Type
+
+from openai import AsyncOpenAI, OpenAI
 from pydantic import BaseModel
 
+from ..errors import ProviderError
 from ..interface.base import LLMInterface
 from ..interface.schemas import (
     Message,
     ModelResponse,
-    TokenUsage,
-    ChatParameters,
+    ProviderConfig,
     Role,
-    ProviderConfig
+    TokenUsage,
 )
 from ..interface.tools import BaseTool
-from ..errors import ProviderError
 from .factory import ProviderFactory
+
 
 class OpenAIFactory(ProviderFactory):
     """Factory for creating OpenAI providers"""
-    
+
     def create_provider(self, config: Optional[ProviderConfig] = None, **kwargs) -> LLMInterface:
         """Create a new OpenAI provider instance"""
         return OpenAIProvider(config=config or ProviderConfig(), **kwargs)
 
 class OpenAIProvider(LLMInterface):
     """OpenAI-specific implementation of the LLM interface"""
-    
+
     def __init__(self, config: ProviderConfig, debug: bool = False):
         """Initialize provider with both sync and async clients"""
         super().__init__(config, debug)
         self._async_client = None  # Initialize async client lazily
-    
+
     def _setup_client(self) -> None:
         """Initialize OpenAI client"""
         try:
@@ -45,7 +46,7 @@ class OpenAIProvider(LLMInterface):
             )
         except Exception as e:
             raise ProviderError(f"Failed to initialize OpenAI client: {str(e)}")
-    
+
     async def _asetup_client(self) -> None:
         """Initialize async OpenAI client"""
         try:
@@ -58,7 +59,7 @@ class OpenAIProvider(LLMInterface):
             )
         except Exception as e:
             raise ProviderError(f"Failed to initialize async OpenAI client: {str(e)}")
-    
+
     async def _ensure_async_client(self) -> None:
         """Ensure async client is initialized"""
         if self._async_client is None:
@@ -80,7 +81,7 @@ class OpenAIProvider(LLMInterface):
                 temperature=temperature,
                 max_tokens=max_tokens
             )
-            
+
             return ModelResponse(
                 content=response.choices[0].message.content,
                 raw_response=self._response_to_dict(response),
@@ -104,7 +105,7 @@ class OpenAIProvider(LLMInterface):
         await self._ensure_async_client()
         current_messages = list(messages)
         all_tool_calls = []
-        
+
         try:
             # First phase: Use tools
             while True:
@@ -112,7 +113,7 @@ class OpenAIProvider(LLMInterface):
                     print("\n🔄 Making async OpenAI API call:")
                     print(f"Messages count: {len(current_messages)}")
                     print("Tools:", [t.name for t in tools])
-                
+
                 # Convert messages and tools to dict format
                 message_dicts = self._format_messages(current_messages)
                 tool_dicts = [t.model_dump() for t in tools]
@@ -129,10 +130,10 @@ class OpenAIProvider(LLMInterface):
                     if self.debug:
                         print(f"\n❌ Async API call failed: {str(api_error)}")
                     raise
-                
+
                 choice = response.choices[0]
                 content = choice.message.content or ""
-                
+
                 # Process tool calls if any
                 if choice.message.tool_calls:
                     # First add the assistant's message with tool calls
@@ -147,28 +148,28 @@ class OpenAIProvider(LLMInterface):
                             }
                         }
                         tool_call_data.append(call_data)
-                    
+
                     # Add the assistant's message with tool calls
                     current_messages.append(Message(
                         role=Role.ASSISTANT,
                         content=content,
                         tool_calls=tool_call_data
                     ))
-                    
+
                     # Process each tool call
                     for tool_call in choice.message.tool_calls:
                         tool = next(
                             (t for t in tools if t.name == tool_call.function.name),
                             None
                         )
-                        
+
                         if tool:
                             args = json.loads(tool_call.function.arguments)
                             result = await tool.arun(**args)  # Use async tool call
-                            
+
                             if self.debug:
                                 print(f"Tool {tool.name} returned: {result}")
-                            
+
                             # Add the tool's response
                             current_messages.append(Message(
                                 role=Role.TOOL,
@@ -176,16 +177,16 @@ class OpenAIProvider(LLMInterface):
                                 tool_call_id=tool_call.id,
                                 name=tool_call.function.name
                             ))
-                            
+
                             # Store tool call for final response
                             call_data = next(
-                                c for c in tool_call_data 
+                                c for c in tool_call_data
                                 if c["id"] == tool_call.id
                             )
                             call_data["result"] = json.dumps(result) if isinstance(result, dict) else str(result)
                             all_tool_calls.append(call_data)
                     continue
-                
+
                 # No more tool calls - get final response
                 if format_json and json_schema:
                     json_response = await self._aget_json_completion(
@@ -197,14 +198,14 @@ class OpenAIProvider(LLMInterface):
                         preserve_tool_calls=all_tool_calls if all_tool_calls else None
                     )
                     return json_response
-                
+
                 return ModelResponse(
                     content=content,
                     raw_response=self._response_to_dict(response),
                     tool_calls=all_tool_calls if all_tool_calls else None,
                     usage=self._extract_usage(response)
                 )
-                
+
         except Exception as e:
             raise ProviderError(f"OpenAI async tool completion failed: {str(e)}")
 
@@ -220,21 +221,21 @@ class OpenAIProvider(LLMInterface):
         """Get a chat completion formatted as JSON asynchronously"""
         try:
             await self._ensure_async_client()
-            
+
             # Get generic JSON formatting prompt
             formatting_prompt = self._get_json_formatting_prompt(schema, messages[-1].content)
-            
+
             # Create messages for OpenAI
             openai_messages = [
                 {"role": "system", "content": formatting_prompt}
             ]
-            
+
             # Add remaining messages, skipping system
             openai_messages.extend([
                 msg.model_dump() for msg in messages
                 if msg.role != Role.SYSTEM
             ])
-            
+
             response = await self._async_client.chat.completions.create(
                 model=model,
                 messages=openai_messages,
@@ -242,7 +243,7 @@ class OpenAIProvider(LLMInterface):
                 temperature=temperature,
                 max_tokens=max_tokens
             )
-            
+
             # Validate against schema
             content = response.choices[0].message.content
             try:
@@ -250,7 +251,7 @@ class OpenAIProvider(LLMInterface):
                 schema.model_validate(data)
             except Exception as e:
                 raise ProviderError(f"Invalid JSON response: {str(e)}")
-            
+
             return ModelResponse(
                 content=content,
                 raw_response=self._response_to_dict(response),
@@ -259,11 +260,11 @@ class OpenAIProvider(LLMInterface):
             )
         except Exception as e:
             raise ProviderError(f"OpenAI async JSON completion failed: {str(e)}")
-    
+
     def _format_messages(self, messages: List[Message]) -> List[Dict[str, Any]]:
         """Convert messages to OpenAI format"""
         openai_messages = []
-        
+
         # Add system messages first (deduplicated)
         system_messages = [msg for msg in messages if msg.role == Role.SYSTEM]
         if system_messages:
@@ -272,7 +273,7 @@ class OpenAIProvider(LLMInterface):
                 "role": "system",
                 "content": system_messages[-1].content
             })
-        
+
         # Add remaining messages in order
         for msg in messages:
             if msg.role != Role.SYSTEM:
@@ -280,21 +281,21 @@ class OpenAIProvider(LLMInterface):
                     "role": msg.role,
                     "content": msg.content
                 }
-                
+
                 # Add tool calls if present
                 if msg.tool_calls:
                     msg_dict["tool_calls"] = msg.tool_calls
-                
+
                 # Add tool call id and name if present
                 if msg.tool_call_id:
                     msg_dict["tool_call_id"] = msg.tool_call_id
                 if msg.name:
                     msg_dict["name"] = msg.name
-                
+
                 openai_messages.append(msg_dict)
-        
+
         return openai_messages
-    
+
     def _get_chat_completion(
         self,
         messages: List[Message],
@@ -310,7 +311,7 @@ class OpenAIProvider(LLMInterface):
                 temperature=temperature,
                 max_tokens=max_tokens
             )
-            
+
             return ModelResponse(
                 content=response.choices[0].message.content,
                 raw_response=self._response_to_dict(response),
@@ -319,7 +320,7 @@ class OpenAIProvider(LLMInterface):
             )
         except Exception as e:
             raise ProviderError(f"OpenAI completion failed: {str(e)}")
-    
+
     def _get_tool_completion(
         self,
         messages: List[Message],
@@ -333,7 +334,7 @@ class OpenAIProvider(LLMInterface):
         """Get completion with tool usage"""
         current_messages = list(messages)
         all_tool_calls = []
-        
+
         try:
             # First phase: Use tools
             while True:
@@ -341,7 +342,7 @@ class OpenAIProvider(LLMInterface):
                     print("\n🔄 Making OpenAI API call:")
                     print(f"Messages count: {len(current_messages)}")
                     print("Tools:", [t.name for t in tools])
-                
+
                 # Convert messages and tools to dict format
                 message_dicts = self._format_messages(current_messages)
                 tool_dicts = [t.model_dump() for t in tools]
@@ -358,10 +359,10 @@ class OpenAIProvider(LLMInterface):
                     if self.debug:
                         print(f"\n❌ API call failed: {str(api_error)}")
                     raise
-                
+
                 choice = response.choices[0]
                 content = choice.message.content or ""
-                
+
                 # Process tool calls if any
                 if choice.message.tool_calls:
                     # First add the assistant's message with tool calls
@@ -376,29 +377,29 @@ class OpenAIProvider(LLMInterface):
                             }
                         }
                         tool_call_data.append(call_data)
-                    
+
                     # Add the assistant's message with tool calls
                     current_messages.append(Message(
                         role=Role.ASSISTANT,
                         content=content,
                         tool_calls=tool_call_data
                     ))
-                    
+
                     # Process each tool call
                     for tool_call in choice.message.tool_calls:
                         tool = next(
                             (t for t in tools if t.name == tool_call.function.name),
                             None
                         )
-                        
+
                         if tool:
                             args = json.loads(tool_call.function.arguments)
                             # Use sync run method instead of async call
                             result = tool.run(**args)
-                            
+
                             if self.debug:
                                 print(f"Tool {tool.name} returned: {result}")
-                            
+
                             # Add the tool's response
                             current_messages.append(Message(
                                 role=Role.TOOL,
@@ -406,7 +407,7 @@ class OpenAIProvider(LLMInterface):
                                 tool_call_id=tool_call.id,
                                 name=tool_call.function.name
                             ))
-                            
+
                             # Store tool call for final response
                             call_data = next(
                                 c for c in tool_call_data
@@ -415,7 +416,7 @@ class OpenAIProvider(LLMInterface):
                             call_data["result"] = json.dumps(result) if isinstance(result, dict) else str(result)
                             all_tool_calls.append(call_data)
                     continue
-                
+
                 # No more tool calls - get final response
                 if format_json and json_schema:
                     json_response = self._get_json_completion(
@@ -427,17 +428,17 @@ class OpenAIProvider(LLMInterface):
                         preserve_tool_calls=all_tool_calls if all_tool_calls else None
                     )
                     return json_response
-                
+
                 return ModelResponse(
                     content=content,
                     raw_response=self._response_to_dict(response),
                     tool_calls=all_tool_calls if all_tool_calls else None,
                     usage=self._extract_usage(response)
                 )
-                
+
         except Exception as e:
             raise ProviderError(f"OpenAI tool completion failed: {str(e)}")
-    
+
     def _get_json_completion(
         self,
         messages: List[Message],
@@ -451,18 +452,18 @@ class OpenAIProvider(LLMInterface):
         try:
             # Get generic JSON formatting prompt
             formatting_prompt = self._get_json_formatting_prompt(schema, messages[-1].content)
-            
+
             # Create messages for OpenAI
             openai_messages = [
                 {"role": "system", "content": formatting_prompt}
             ]
-            
+
             # Add remaining messages, skipping system
             openai_messages.extend([
                 msg.model_dump() for msg in messages
                 if msg.role != Role.SYSTEM
             ])
-            
+
             response = self.client.chat.completions.create(
                 model=model,
                 messages=openai_messages,
@@ -470,7 +471,7 @@ class OpenAIProvider(LLMInterface):
                 temperature=temperature,
                 max_tokens=max_tokens
             )
-            
+
             # Validate against schema
             content = response.choices[0].message.content
             try:
@@ -478,7 +479,7 @@ class OpenAIProvider(LLMInterface):
                 schema.model_validate(data)
             except Exception as e:
                 raise ProviderError(f"Invalid JSON response: {str(e)}")
-            
+
             return ModelResponse(
                 content=content,
                 raw_response=self._response_to_dict(response),
@@ -487,14 +488,14 @@ class OpenAIProvider(LLMInterface):
             )
         except Exception as e:
             raise ProviderError(f"OpenAI JSON completion failed: {str(e)}")
-    
+
     def _extract_tool_calls(self, response: Any) -> Optional[List[Dict[str, Any]]]:
         """Extract tool calls from OpenAI response"""
-        if not hasattr(response.choices[0].message, 'tool_calls'):
+        if not hasattr(response.choices[0].message, "tool_calls"):
             return None
         if not response.choices[0].message.tool_calls:
             return None
-        
+
         tool_calls = []
         for tool_call in response.choices[0].message.tool_calls:
             call_data = {
@@ -505,21 +506,21 @@ class OpenAIProvider(LLMInterface):
                     "arguments": tool_call.function.arguments
                 }
             }
-            
+
             # Add tool call result if available
-            if hasattr(tool_call, 'result'):
+            if hasattr(tool_call, "result"):
                 call_data["result"] = tool_call.result
-            elif hasattr(tool_call.function, 'result'):
+            elif hasattr(tool_call.function, "result"):
                 call_data["result"] = tool_call.function.result
-            
+
             tool_calls.append(call_data)
-        
+
         return tool_calls
-    
+
     def _extract_content(self, response: Any) -> str:
         """Extract content from OpenAI response"""
         return response.choices[0].message.content or ""
-    
+
     def _extract_usage(self, response: Any) -> TokenUsage:
         """Extract token usage from response"""
         usage = response.usage
@@ -528,7 +529,7 @@ class OpenAIProvider(LLMInterface):
             completion_tokens=usage.completion_tokens,
             total_tokens=usage.total_tokens
         )
-    
+
     def _response_to_dict(self, response: Any) -> Dict[str, Any]:
         """Convert OpenAI response to dictionary"""
         return {
@@ -562,7 +563,7 @@ class OpenAIProvider(LLMInterface):
             "model": response.model,
             "created": response.created
         }
-    
+
     def complete(
         self,
         messages: List[Message],
@@ -582,7 +583,7 @@ class OpenAIProvider(LLMInterface):
             print("\nMessages:")
             for msg in messages:
                 print(f"{msg.role}: {msg.content[:100]}...")
-        
+
         try:
             if tools:
                 if self.debug:
@@ -591,7 +592,7 @@ class OpenAIProvider(LLMInterface):
                     for tool in tools:
                         print(f"\n{tool.name}:")
                         print(json.dumps(tool.get_schema(), indent=2))
-                
+
                 return self._get_tool_completion(
                     messages=messages,
                     model=model,
@@ -606,7 +607,7 @@ class OpenAIProvider(LLMInterface):
                     print("\n📋 Making JSON completion request...")
                     print("Schema:")
                     print(json.dumps(response_schema.model_json_schema(), indent=2))
-                    
+
                 return self._get_json_completion(
                     messages=messages,
                     model=model,
@@ -617,7 +618,7 @@ class OpenAIProvider(LLMInterface):
             else:
                 if self.debug:
                     print("\n💬 Making basic completion request...")
-                    
+
                 return self._get_chat_completion(
                     messages=messages,
                     model=model,

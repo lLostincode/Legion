@@ -1,24 +1,16 @@
+import asyncio
 import json
 from abc import ABC, abstractmethod
-from typing import List, Dict, Any, Optional, Sequence, Type, TypeVar, Union, Callable, Awaitable
-from pydantic import BaseModel
 from functools import wraps
-import asyncio
+from typing import Any, Awaitable, Callable, Dict, List, Optional, Sequence, Type, TypeVar, Union
 
-from legion.errors.exceptions import ToolError
+from pydantic import BaseModel
 
-from .schemas import (
-    Message,
-    ModelResponse,
-    TokenUsage,
-    ProviderConfig,
-    ChatParameters,
-    Role
-)
+from ..errors import ProviderError
+from .schemas import Message, ModelResponse, ProviderConfig, Role, TokenUsage
 from .tools import BaseTool
-from ..errors import ProviderError, JSONFormatError
 
-T = TypeVar('T')
+T = TypeVar("T")
 
 def supports_async(sync_func: Callable[..., T]) -> Callable[..., Union[T, Awaitable[T]]]:
     """Decorator to support both sync and async implementations"""
@@ -36,43 +28,44 @@ def supports_async(sync_func: Callable[..., T]) -> Callable[..., Union[T, Awaita
 
 class LLMInterface(ABC):
     """Abstract base class defining the LLM provider interface"""
-    
+
     def __init__(
         self,
         config: ProviderConfig,
         debug: bool = False
     ):
-        """
-        Initialize LLM provider
-        
+        """Initialize LLM provider
+
         Args:
+        ----
             config: Provider configuration
             debug: Enable debug logging
+
         """
         self.config = config
         self.debug = debug
         self._setup_client()
-    
+
     @abstractmethod
     def _setup_client(self) -> None:
         """Initialize provider-specific client"""
         pass
-    
+
     @abstractmethod
     def _format_messages(self, messages: List[Message]) -> Any:
         """Convert standard messages to provider format"""
         pass
-    
+
     @abstractmethod
     def _extract_tool_calls(self, response: Any) -> Optional[List[Dict[str, Any]]]:
         """Extract tool calls from provider response"""
         pass
-    
+
     @abstractmethod
     def _extract_content(self, response: Any) -> str:
         """Extract content from provider response"""
         pass
-    
+
     @abstractmethod
     def _extract_usage(self, response: Any) -> TokenUsage:
         """Extract token usage from provider response"""
@@ -86,7 +79,7 @@ class LLMInterface(ABC):
         """Format a tool-using conversation for JSON conversion"""
         # Create a narrative of the conversation
         narrative = []
-        
+
         # Process each message
         for msg in tool_conversation:
             if msg.role == Role.USER:
@@ -106,7 +99,7 @@ class LLMInterface(ABC):
 
         # Get the schema as JSON for the prompt
         schema_json = schema.model_json_schema()
-        
+
         # Create messages for JSON formatting
         return [
             Message(
@@ -150,10 +143,10 @@ class LLMInterface(ABC):
         format_json: bool = False,
         json_schema: Optional[Type[BaseModel]] = None
     ) -> ModelResponse:
-        """
-        Get a chat completion with tool use
-        
+        """Get a chat completion with tool use
+
         Args:
+        ----
             messages: Conversation messages
             model: Model to use
             tools: Available tools
@@ -161,6 +154,7 @@ class LLMInterface(ABC):
             max_tokens: Max tokens to generate
             format_json: Whether to format final response as JSON
             json_schema: Schema to use for JSON formatting
+
         """
         pass
 
@@ -179,7 +173,7 @@ class LLMInterface(ABC):
     def _get_json_formatting_prompt(self, schema: Type[BaseModel], content: str) -> str:
         """Create generic JSON formatting prompt"""
         schema_json = schema.model_json_schema()
-        
+
         # Extract field info
         fields = []
         for field_name, field_info in schema_json["properties"].items():
@@ -187,7 +181,7 @@ class LLMInterface(ABC):
             field_desc = field_info.get("description", "")
             required = field_name in schema_json.get("required", [])
             fields.append(f"- {field_name} ({field_type}): {field_desc}" + (" (required)" if required else ""))
-        
+
         formatting_instructions = (
             "Create a JSON response with these fields:\n" +
             "\n".join(fields) + "\n\n"
@@ -206,7 +200,7 @@ class LLMInterface(ABC):
             "5. Do not add extra fields\n\n"
             "Format response as valid JSON only. No other text."
         )
-        
+
         return f"{formatting_instructions}\n\nContent to format:\n{content}"
 
     @supports_async

@@ -1,23 +1,24 @@
+from typing import Any, Dict
+
 import pytest
-from typing import Dict, Any, Optional
-from pydantic import BaseModel
 from dotenv import load_dotenv
+from pydantic import BaseModel
 
 # Load environment variables
 load_dotenv()
 
 from legion.agents.base import Agent
-from legion.graph.state import GraphState
-from legion.graph.nodes.base import NodeBase
+from legion.graph.edges.base import EdgeBase
+from legion.graph.edges.registry import EdgeRegistry
+from legion.graph.edges.validator import EdgeValidator
 from legion.graph.nodes.agent import AgentNode
 from legion.graph.nodes.registry import NodeRegistry
-from legion.graph.edges.base import EdgeBase
-from legion.graph.edges.validator import EdgeValidator, ValidationResult
-from legion.graph.edges.registry import EdgeRegistry
-from legion.interface.schemas import Message
+from legion.graph.state import GraphState
+
 
 class TestResponse(BaseModel):
     """Test response schema"""
+
     content: str
     metadata: Dict[str, Any]
 
@@ -90,7 +91,7 @@ def test_edge_initialization(graph_state, source_node, target_node):
         source_channel="output",
         target_channel="input"
     )
-    
+
     assert edge.source_node == source_node
     assert edge.target_node == target_node
     assert edge.source_channel == "output"
@@ -106,7 +107,7 @@ def test_edge_validation_success(validator, source_node, target_node):
         source_channel="output",
         target_channel="input"
     )
-    
+
     assert result.is_valid
     assert result.error is None
 
@@ -118,7 +119,7 @@ def test_edge_validation_invalid_source_channel(validator, source_node, target_n
         source_channel="nonexistent",
         target_channel="input"
     )
-    
+
     assert not result.is_valid
     assert "Source channel" in result.error
 
@@ -130,7 +131,7 @@ def test_edge_validation_invalid_target_channel(validator, source_node, target_n
         source_channel="output",
         target_channel="nonexistent"
     )
-    
+
     assert not result.is_valid
     assert "Target channel" in result.error
 
@@ -139,7 +140,7 @@ def test_edge_registry_create_edge(edge_registry, node_registry, source_node, ta
     # Register nodes first
     node_registry._nodes[source_node.node_id] = source_node
     node_registry._nodes[target_node.node_id] = target_node
-    
+
     edge = edge_registry.create_edge(
         type_name="base",
         source_node_id=source_node.node_id,
@@ -147,7 +148,7 @@ def test_edge_registry_create_edge(edge_registry, node_registry, source_node, ta
         source_channel="output",
         target_channel="input"
     )
-    
+
     assert edge is not None
     assert edge.source_node == source_node
     assert edge.target_node == target_node
@@ -158,7 +159,7 @@ def test_edge_registry_delete_edge(edge_registry, node_registry, source_node, ta
     # Register nodes first
     node_registry._nodes[source_node.node_id] = source_node
     node_registry._nodes[target_node.node_id] = target_node
-    
+
     edge = edge_registry.create_edge(
         type_name="base",
         source_node_id=source_node.node_id,
@@ -166,10 +167,10 @@ def test_edge_registry_delete_edge(edge_registry, node_registry, source_node, ta
         source_channel="output",
         target_channel="input"
     )
-    
+
     edge_id = edge.edge_id
     edge_registry.delete_edge(edge_id)
-    
+
     assert edge_registry.get_edge(edge_id) is None
     assert edge_id not in edge_registry.get_node_edges(source_node.node_id)
     assert edge_id not in edge_registry.get_node_edges(target_node.node_id, as_source=False)
@@ -179,16 +180,16 @@ def test_edge_registry_cycle_detection(edge_registry, node_registry, source_node
     # Register nodes first
     node_registry._nodes[source_node.node_id] = source_node
     node_registry._nodes[target_node.node_id] = target_node
-    
+
     # Create first edge
-    edge1 = edge_registry.create_edge(
+    edge_registry.create_edge(
         type_name="base",
         source_node_id=source_node.node_id,
         target_node_id=target_node.node_id,
         source_channel="output",
         target_channel="input"
     )
-    
+
     # Attempt to create cycle
     with pytest.raises(ValueError, match="cycle"):
         edge_registry.create_edge(
@@ -204,7 +205,7 @@ def test_edge_registry_channel_edges(edge_registry, node_registry, source_node, 
     # Register nodes first
     node_registry._nodes[source_node.node_id] = source_node
     node_registry._nodes[target_node.node_id] = target_node
-    
+
     edge = edge_registry.create_edge(
         type_name="base",
         source_node_id=source_node.node_id,
@@ -212,10 +213,10 @@ def test_edge_registry_channel_edges(edge_registry, node_registry, source_node, 
         source_channel="output",
         target_channel="input"
     )
-    
+
     source_edges = edge_registry.get_channel_edges(source_node.node_id, "output")
     target_edges = edge_registry.get_channel_edges(target_node.node_id, "input")
-    
+
     assert edge.edge_id in source_edges
     assert edge.edge_id in target_edges
 
@@ -228,10 +229,10 @@ def test_edge_checkpoint_restore(graph_state, source_node, target_node):
         source_channel="output",
         target_channel="input"
     )
-    
+
     # Create checkpoint
     checkpoint = edge.checkpoint()
-    
+
     # Create new edge and restore
     new_edge = EdgeBase(
         graph_state=graph_state,
@@ -241,7 +242,7 @@ def test_edge_checkpoint_restore(graph_state, source_node, target_node):
         target_channel="input"
     )
     new_edge.restore(checkpoint)
-    
+
     assert new_edge.metadata.edge_id == edge.metadata.edge_id
     assert new_edge.metadata.version == edge.metadata.version
     assert new_edge.source_channel == edge.source_channel
@@ -256,7 +257,7 @@ def test_edge_validator_cache(validator, source_node, target_node):
         source_channel="output",
         target_channel="input"
     )
-    
+
     # Second validation (should use cache)
     result2 = validator.validate_edge(
         source_node=source_node,
@@ -264,12 +265,12 @@ def test_edge_validator_cache(validator, source_node, target_node):
         source_channel="output",
         target_channel="input"
     )
-    
+
     assert result1 is result2  # Should be same object due to caching
-    
+
     # Invalidate cache
     validator.invalidate_cache(node_id=source_node.node_id)
-    
+
     # Third validation (should not use cache)
     result3 = validator.validate_edge(
         source_node=source_node,
@@ -277,7 +278,7 @@ def test_edge_validator_cache(validator, source_node, target_node):
         source_channel="output",
         target_channel="input"
     )
-    
+
     assert result1 is not result3  # Should be different objects
 
 def test_edge_registry_restore(edge_registry, node_registry, source_node, target_node):
@@ -285,25 +286,25 @@ def test_edge_registry_restore(edge_registry, node_registry, source_node, target
     # Register nodes first
     node_registry._nodes[source_node.node_id] = source_node
     node_registry._nodes[target_node.node_id] = target_node
-    
+
     # Create edge
-    edge = edge_registry.create_edge(
+    edge_registry.create_edge(
         type_name="base",
         source_node_id=source_node.node_id,
         target_node_id=target_node.node_id,
         source_channel="output",
         target_channel="input"
     )
-    
+
     # Create checkpoint
     checkpoint = edge_registry.checkpoint()
-    
+
     # Create new registry and restore
     new_registry = EdgeRegistry(graph_state, node_registry)
     new_registry.register_edge_type("base", EdgeBase)
     new_registry.restore(checkpoint)
-    
+
     assert new_registry.metadata.version == edge_registry.metadata.version
 
 if __name__ == "__main__":
-    pytest.main(["-v", __file__]) 
+    pytest.main(["-v", __file__])

@@ -1,6 +1,5 @@
 """Type definitions for group implementations"""
-from typing import Dict, List, Union, TypeVar, Type, TYPE_CHECKING, Optional
-from pydantic import BaseModel
+from typing import TYPE_CHECKING, Dict, List, TypeVar, Union
 
 from ..agents.base import Agent
 from ..blocks.base import FunctionalBlock
@@ -17,8 +16,8 @@ MemberDict = Dict[str, AgentOrGroup]
 MemberList = List[ChainMember]
 
 # Type variable for group classes
-GroupT = TypeVar('GroupT', bound=BaseGroup)
+GroupT = TypeVar("GroupT", bound=BaseGroup)
 
 # Group type hints
-ChainType = TypeVar('ChainType', bound='Chain')
-TeamType = TypeVar('TeamType', bound='Team')
+ChainType = TypeVar("ChainType", bound="Chain")
+TeamType = TypeVar("TeamType", bound="Team")

@@ -1,5 +1,6 @@
-import pytest
 import os
+
+import pytest
 from dotenv import load_dotenv
 
 # Load environment variables
@@ -11,4 +12,4 @@ if __name__ == "__main__":
         os.path.dirname(__file__),  # Run tests in current directory
         "-v",                       # Verbose output
         "--asyncio-mode=auto"       # Enable async test support
-    ]) 
+    ])

@@ -1,21 +1,21 @@
 """Tests for team-specific event types"""
 
-import pytest
 from datetime import datetime, timezone
 from uuid import uuid4
 
-from legion.monitoring.events.base import Event, EventType, EventCategory, EventSeverity
+from legion.monitoring.events.base import Event, EventCategory, EventSeverity, EventType
 from legion.monitoring.events.team import (
-    TeamEvent,
-    TeamFormationEvent,
-    TeamDelegationEvent,
-    TeamLeadershipEvent,
     TeamCommunicationEvent,
     TeamCompletionEvent,
+    TeamDelegationEvent,
+    TeamErrorEvent,
+    TeamEvent,
+    TeamFormationEvent,
+    TeamLeadershipEvent,
     TeamPerformanceEvent,
     TeamStateChangeEvent,
-    TeamErrorEvent
 )
+
 
 def test_base_team_event():
     """Test base TeamEvent initialization"""
@@ -23,7 +23,7 @@ def test_base_team_event():
         component_id="test_team",
         category=EventCategory.EXECUTION
     )
-    
+
     assert event.event_type == EventType.TEAM
     assert event.component_id == "test_team"
     assert event.category == EventCategory.EXECUTION
@@ -37,14 +37,14 @@ def test_team_formation_event():
     leader_id = str(uuid4())
     member_ids = [str(uuid4()) for _ in range(3)]
     team_config = {"max_members": 5, "specialization": "test"}
-    
+
     event = TeamFormationEvent(
         component_id="test_team",
         leader_id=leader_id,
         member_ids=member_ids,
         team_config=team_config
     )
-    
+
     assert event.event_type == EventType.TEAM
     assert event.category == EventCategory.EXECUTION
     assert event.metadata["leader_id"] == leader_id
@@ -57,7 +57,7 @@ def test_team_delegation_event():
     member_id = str(uuid4())
     task_input = {"data": "test"}
     delegation_context = {"priority": "high"}
-    
+
     event = TeamDelegationEvent(
         component_id="test_team",
         leader_id=leader_id,
@@ -66,7 +66,7 @@ def test_team_delegation_event():
         task_input=task_input,
         delegation_context=delegation_context
     )
-    
+
     assert event.event_type == EventType.TEAM
     assert event.category == EventCategory.EXECUTION
     assert event.metadata["leader_id"] == leader_id
@@ -80,7 +80,7 @@ def test_team_leadership_event():
     leader_id = str(uuid4())
     affected_members = [str(uuid4()) for _ in range(2)]
     decision_context = {"workload": "high"}
-    
+
     event = TeamLeadershipEvent(
         component_id="test_team",
         leader_id=leader_id,
@@ -89,7 +89,7 @@ def test_team_leadership_event():
         reasoning="Optimize team performance",
         affected_members=affected_members
     )
-    
+
     assert event.event_type == EventType.TEAM
     assert event.category == EventCategory.EXECUTION
     assert event.metadata["leader_id"] == leader_id
@@ -104,7 +104,7 @@ def test_team_communication_event():
     receiver_id = str(uuid4())
     message_content = {"status": "in_progress"}
     context = {"thread_id": "123"}
-    
+
     event = TeamCommunicationEvent(
         component_id="test_team",
         sender_id=sender_id,
@@ -113,7 +113,7 @@ def test_team_communication_event():
         message_content=message_content,
         context=context
     )
-    
+
     assert event.event_type == EventType.TEAM
     assert event.category == EventCategory.EXECUTION
     assert event.metadata["sender_id"] == sender_id
@@ -130,7 +130,7 @@ def test_team_completion_event():
         str(uuid4()): {"time_spent": 100},
         str(uuid4()): {"time_spent": 150}
     }
-    
+
     event = TeamCompletionEvent(
         component_id="test_team",
         task_type="analysis",
@@ -139,7 +139,7 @@ def test_team_completion_event():
         duration_ms=250.0,
         member_contributions=member_contributions
     )
-    
+
     assert event.event_type == EventType.TEAM
     assert event.category == EventCategory.EXECUTION
     assert event.metadata["task_type"] == "analysis"
@@ -151,7 +151,7 @@ def test_team_completion_event():
 def test_team_performance_event():
     """Test TeamPerformanceEvent initialization and metadata"""
     metric_context = {"window_start": "2023-01-01T00:00:00Z"}
-    
+
     event = TeamPerformanceEvent(
         component_id="test_team",
         metric_type="delegation_success_rate",
@@ -159,7 +159,7 @@ def test_team_performance_event():
         metric_context=metric_context,
         time_window_ms=3600000.0
     )
-    
+
     assert event.event_type == EventType.TEAM
     assert event.category == EventCategory.EXECUTION
     assert event.metadata["metric_type"] == "delegation_success_rate"
@@ -172,7 +172,7 @@ def test_team_state_change_event():
     old_state = {"members": ["id1", "id2"]}
     new_state = {"members": ["id1", "id2", "id3"]}
     affected_members = ["id3"]
-    
+
     event = TeamStateChangeEvent(
         component_id="test_team",
         change_type="member_added",
@@ -181,7 +181,7 @@ def test_team_state_change_event():
         change_reason="Team expansion",
         affected_members=affected_members
     )
-    
+
     assert event.event_type == EventType.TEAM
     assert event.category == EventCategory.EXECUTION
     assert event.metadata["change_type"] == "member_added"
@@ -194,7 +194,7 @@ def test_team_error_event():
     """Test TeamErrorEvent initialization and metadata"""
     error_context = {"operation": "delegation"}
     affected_members = [str(uuid4()), str(uuid4())]
-    
+
     event = TeamErrorEvent(
         component_id="test_team",
         error_type="DelegationError",
@@ -203,7 +203,7 @@ def test_team_error_event():
         affected_members=affected_members,
         traceback="Test traceback"
     )
-    
+
     assert event.event_type == EventType.TEAM
     assert event.category == EventCategory.ERROR
     assert event.severity == EventSeverity.ERROR
@@ -221,7 +221,7 @@ def test_event_inheritance():
         member_ids=[str(uuid4())],
         team_config={}
     )
-    
+
     assert isinstance(event, TeamEvent)
     assert isinstance(event, Event)
     assert hasattr(event, "id")
@@ -239,7 +239,7 @@ def test_event_timing():
         duration_ms=100.0,
         member_contributions={}
     )
-    
+
     assert event.timestamp >= start_time
     assert event.metadata["duration_ms"] == 100.0
 
@@ -255,6 +255,6 @@ def test_event_parent_child_relationship():
         delegation_context={},
         parent_event_id=parent_id
     )
-    
+
     assert event.parent_event_id == parent_id
-    assert parent_id in event.trace_path 
+    assert parent_id in event.trace_path

@@ -1,20 +1,20 @@
 """Tests for chain-specific event types"""
 
-import pytest
 from datetime import datetime, timezone
 from uuid import uuid4
 
-from legion.monitoring.events.base import Event, EventType, EventCategory, EventSeverity
+from legion.monitoring.events.base import Event, EventCategory, EventSeverity, EventType
 from legion.monitoring.events.chain import (
-    ChainEvent,
-    ChainStartEvent,
-    ChainStepEvent,
-    ChainTransformEvent,
+    ChainBottleneckEvent,
     ChainCompletionEvent,
     ChainErrorEvent,
+    ChainEvent,
+    ChainStartEvent,
     ChainStateChangeEvent,
-    ChainBottleneckEvent
+    ChainStepEvent,
+    ChainTransformEvent,
 )
+
 
 def test_base_chain_event():
     """Test base ChainEvent initialization"""
@@ -22,7 +22,7 @@ def test_base_chain_event():
         component_id="test_chain",
         category=EventCategory.EXECUTION
     )
-    
+
     assert event.event_type == EventType.CHAIN
     assert event.component_id == "test_chain"
     assert event.category == EventCategory.EXECUTION
@@ -38,7 +38,7 @@ def test_chain_start_event():
         input_message="Test input",
         member_count=3
     )
-    
+
     assert event.event_type == EventType.CHAIN
     assert event.category == EventCategory.EXECUTION
     assert event.metadata["input_message"] == "Test input"
@@ -53,7 +53,7 @@ def test_chain_step_event():
         input_message="Test input",
         is_final_step=False
     )
-    
+
     assert event.event_type == EventType.CHAIN
     assert event.category == EventCategory.EXECUTION
     assert event.metadata["step_name"] == "step_1"
@@ -71,7 +71,7 @@ def test_chain_transform_event():
         output_message="Test output",
         transformation_time_ms=100.0
     )
-    
+
     assert event.event_type == EventType.CHAIN
     assert event.category == EventCategory.EXECUTION
     assert event.metadata["step_name"] == "step_1"
@@ -87,7 +87,7 @@ def test_chain_completion_event():
         "step_2": 200.0,
         "step_3": 150.0
     }
-    
+
     event = ChainCompletionEvent(
         component_id="test_chain",
         input_message="Test input",
@@ -95,7 +95,7 @@ def test_chain_completion_event():
         total_time_ms=450.0,
         step_times=step_times
     )
-    
+
     assert event.event_type == EventType.CHAIN
     assert event.category == EventCategory.EXECUTION
     assert event.metadata["input_message"] == "Test input"
@@ -113,7 +113,7 @@ def test_chain_error_event():
         step_index=0,
         traceback="Test traceback"
     )
-    
+
     assert event.event_type == EventType.CHAIN
     assert event.category == EventCategory.ERROR
     assert event.severity == EventSeverity.ERROR
@@ -127,7 +127,7 @@ def test_chain_state_change_event():
     """Test ChainStateChangeEvent initialization and metadata"""
     old_state = {"member_count": 2}
     new_state = {"member_count": 3}
-    
+
     event = ChainStateChangeEvent(
         component_id="test_chain",
         change_type="member_added",
@@ -135,7 +135,7 @@ def test_chain_state_change_event():
         new_state=new_state,
         change_reason="Added new member"
     )
-    
+
     assert event.event_type == EventType.CHAIN
     assert event.category == EventCategory.EXECUTION
     assert event.metadata["change_type"] == "member_added"
@@ -153,7 +153,7 @@ def test_chain_bottleneck_event():
         average_time_ms=200.0,
         threshold_ms=500.0
     )
-    
+
     assert event.event_type == EventType.CHAIN
     assert event.category == EventCategory.EXECUTION
     assert event.severity == EventSeverity.WARNING
@@ -171,7 +171,7 @@ def test_event_inheritance():
         input_message="Test input",
         member_count=3
     )
-    
+
     assert isinstance(event, ChainEvent)
     assert isinstance(event, Event)
     assert hasattr(event, "id")
@@ -189,7 +189,7 @@ def test_event_timing():
         output_message="Test output",
         transformation_time_ms=100.0
     )
-    
+
     assert event.timestamp >= start_time
     assert event.metadata["transformation_time_ms"] == 100.0
 
@@ -204,6 +204,6 @@ def test_event_parent_child_relationship():
         is_final_step=False,
         parent_event_id=parent_id
     )
-    
+
     assert event.parent_event_id == parent_id
-    assert parent_id in event.trace_path 
+    assert parent_id in event.trace_path
