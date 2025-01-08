@@ -79,8 +79,17 @@ python scripts/typecheck.py legion/agents legion/blocks
 python scripts/lint.py
 ```
 
-4. Update documentation if needed
-5. Add tests for new features
+4. Run security checks:
+```bash
+# Run security scans
+python scripts/security.py
+
+# Check specific modules
+python scripts/security.py legion/agents legion/blocks
+```
+
+5. Update documentation if needed
+6. Add tests for new features
 
 ## Pull Request Process
 
