@@ -9,18 +9,18 @@ from typing import List, Optional, Sequence
 
 def run_mypy(paths: Optional[Sequence[str]] = None) -> int:
     """Run mypy type checker on specified paths.
-    
+
     Args:
         paths: List of paths to check. If None, checks default paths.
-        
+
     Returns:
         Exit code from mypy (0 for success, non-zero for errors)
     """
     project_root = Path(__file__).parent.parent
-    
+
     if paths is None:
         paths = ['legion']
-    
+
     cmd = [
         sys.executable,
         '-m', 'mypy',
@@ -33,7 +33,12 @@ def run_mypy(paths: Optional[Sequence[str]] = None) -> int:
         '--hide-error-codes',
         *paths
     ]
-    
+
+    print("\n" + "=" * 80)
+    print("Running type checking...")
+    print(f"Command: {' '.join(cmd)}")
+    print("=" * 80 + "\n")
+
     try:
         # Run mypy
         result = subprocess.run(
@@ -43,38 +48,58 @@ def run_mypy(paths: Optional[Sequence[str]] = None) -> int:
             text=True,
             check=False
         )
-        
-        # Print output
+
+        # Always print command output for visibility
         if result.stdout:
+            print("Output:")
+            print("-" * 40)
             print(result.stdout.strip())
+
         if result.stderr:
+            print("\nErrors:")
+            print("-" * 40)
             print(result.stderr.strip(), file=sys.stderr)
-            
+
         # Count actual errors (ignore notes and other info)
         error_count = len([
-            line for line in result.stdout.split('\n') 
+            line for line in result.stdout.split('\n')
             if line.strip() and ': error:' in line
         ])
-        
+
+        print("\n" + "=" * 40)
         if error_count > 0:
-            print(f"\nFound {error_count} type issues")
+            print(f"Found {error_count} type issues")
         else:
-            print("\nNo type issues found!")
-            
+            print("No type issues found!")
+        print("=" * 40 + "\n")
+
+        if result.returncode != 0:
+            print(f"Type checking failed with exit code: {result.returncode}", file=sys.stderr)
+
         return result.returncode
-        
+
     except subprocess.CalledProcessError as e:
-        print(f"Error running mypy: {e}", file=sys.stderr)
+        print(f"Error running mypy: {str(e)}", file=sys.stderr)
+        if e.stdout:
+            print("\nOutput:", file=sys.stderr)
+            print(e.stdout.decode().strip(), file=sys.stderr)
+        if e.stderr:
+            print("\nErrors:", file=sys.stderr)
+            print(e.stderr.decode().strip(), file=sys.stderr)
         return 1
     except Exception as e:
-        print(f"Unexpected error: {e}", file=sys.stderr)
+        print(f"Unexpected error during type checking: {str(e)}", file=sys.stderr)
         return 1
 
 
 def main() -> int:
     """Run the type checking process."""
-    return run_mypy()
+    try:
+        return run_mypy()
+    except Exception as e:
+        print(f"Fatal error in type checking: {str(e)}", file=sys.stderr)
+        return 1
 
 
 if __name__ == '__main__':
-    sys.exit(main()) 
+    sys.exit(main())

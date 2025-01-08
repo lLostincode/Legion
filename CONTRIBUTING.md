@@ -16,13 +16,22 @@ Welcome! We're excited you're interested in contributing to Legion. This documen
 
 2. **Set Up Development Environment**
    ```bash
-   # Create a virtual environment
-   python -m venv venv
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
-   
-   # Install dependencies
-   pip install -r requirements.txt
+   # Run the setup script
+   python3 scripts/setup_env.py
+
+   # Activate the virtual environment
+   # On macOS/Linux:
+   source venv/bin/activate
+   # On Windows:
+   # venv\Scripts\activate
    ```
+
+   This will:
+   - Create a virtual environment
+   - Install all dependencies
+   - Set up pre-commit hooks
+
+   Note: Make sure you have Python 3.8+ installed before running the setup script.
 
 3. **Create a Branch**
    ```bash
@@ -52,7 +61,24 @@ We use mypy for static type checking. Key requirements:
 - Run type checks before submitting PRs
 
 ### Before Submitting
-1. Run tests: 
+1. Set up pre-commit hooks:
+   ```bash
+   # Install pre-commit
+   pip install pre-commit
+
+   # Install the git hooks
+   pre-commit install
+   ```
+
+2. The pre-commit hooks will automatically run:
+   - Non-integration tests
+   - Type checking with mypy
+   - Style checking with ruff
+   - Security checks with bandit and safety
+
+   You can also run these checks manually:
+
+3. Run tests:
 ```bash
 # Run all tests except integration tests
 pytest -v -m "not integration"
@@ -64,7 +90,7 @@ pytest -v -m integration
 pytest -v
 ```
 
-2. Run type checking:
+4. Run type checking:
 ```bash
 # Run mypy type checker
 python scripts/typecheck.py
@@ -73,13 +99,13 @@ python scripts/typecheck.py
 python scripts/typecheck.py legion/agents legion/blocks
 ```
 
-3. Run code style checks:
+5. Run code style checks:
 ```bash
 # Run ruff linter
 python scripts/lint.py
 ```
 
-4. Run security checks:
+6. Run security checks:
 ```bash
 # Run security scans
 python scripts/security.py
@@ -88,8 +114,8 @@ python scripts/security.py
 python scripts/security.py legion/agents legion/blocks
 ```
 
-5. Update documentation if needed
-6. Add tests for new features
+7. Update documentation if needed
+8. Add tests for new features
 
 ## Pull Request Process
 

@@ -57,7 +57,7 @@ class Analyzer:
 class ProcessorMeta(type):
     """Metaclass for processor nodes"""
 
-    def __new__(mcs, name, bases, attrs):
+    def __new__(cls, name, bases, attrs):
         # Create preprocessor and transformer instances
         if name == "Processor":
             # Create instances
@@ -83,7 +83,7 @@ class ProcessorMeta(type):
             attrs["create_node"] = create_node
 
             # Create class
-            cls = super().__new__(mcs, name, bases, attrs)
+            cls = super().__new__(cls, name, bases, attrs)
 
             # Mark as chain-decorated
             cls.__chain_decorator__ = True
@@ -100,7 +100,7 @@ class ProcessorMeta(type):
             }
 
             return cls
-        return super().__new__(mcs, name, bases, attrs)
+        return super().__new__(cls, name, bases, attrs)
 
 class Processor(metaclass=ProcessorMeta):
     """Processing chain node."""
@@ -135,7 +135,7 @@ class Processor(metaclass=ProcessorMeta):
 class ReviewTeamMeta(type):
     """Metaclass for review team nodes"""
 
-    def __new__(mcs, name, bases, attrs):
+    def __new__(cls, name, bases, attrs):
         # Create team member instances
         if name == "ReviewTeam":
             # Create instances
@@ -164,7 +164,7 @@ class ReviewTeamMeta(type):
             attrs["create_node"] = create_node
 
             # Create class
-            cls = super().__new__(mcs, name, bases, attrs)
+            cls = super().__new__(cls, name, bases, attrs)
 
             # Mark as team-decorated
             cls.__team_decorator__ = True
@@ -182,7 +182,7 @@ class ReviewTeamMeta(type):
             }
 
             return cls
-        return super().__new__(mcs, name, bases, attrs)
+        return super().__new__(cls, name, bases, attrs)
 
 class ReviewTeam(metaclass=ReviewTeamMeta):
     """Review team node."""

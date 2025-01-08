@@ -8,4 +8,4 @@ setup(
         "pydantic>=2.0.0",
         "openai>=1.0.0"
     ]
-) 
+)
