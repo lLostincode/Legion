@@ -58,8 +58,12 @@ def setup_environment() -> int:
         print("\n6. Installing pre-commit...")
         run_command([str(python_path), "-m", "pip", "install", "pre-commit"])
 
+        # Clear pre-commit cache
+        print("\n7. Clearing pre-commit cache...")
+        run_command([str(python_path), "-m", "pre_commit", "clean"])
+
         # Install pre-commit hooks
-        print("\n7. Installing pre-commit hooks...")
+        print("\n8. Installing pre-commit hooks...")
         run_command([str(python_path), "-m", "pre_commit", "install"])
 
         print("\nEnvironment setup complete! 🎉")

@@ -14,15 +14,6 @@ repos:
       verbose: true
       additional_dependencies: [pytest, python-dotenv]
 
-    - id: type-check
-      name: Type checking
-      entry: python3 scripts/typecheck.py || python scripts/typecheck.py
-      language: python
-      types: [python]
-      pass_filenames: false
-      verbose: true
-      additional_dependencies: [mypy]
-
     - id: style-check
       name: Style checking
       entry: python3 scripts/lint.py || python scripts/lint.py

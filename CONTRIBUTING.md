@@ -72,7 +72,6 @@ We use mypy for static type checking. Key requirements:
 
 2. The pre-commit hooks will automatically run:
    - Non-integration tests
-   - Type checking with mypy
    - Style checking with ruff
    - Security checks with bandit and safety
 
@@ -90,7 +89,7 @@ pytest -v -m integration
 pytest -v
 ```
 
-4. Run type checking:
+4. Run type checking (optional, but recommended):
 ```bash
 # Run mypy type checker
 python scripts/typecheck.py

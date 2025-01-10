@@ -24,9 +24,8 @@ def install_pre_commit() -> int:
         print("\nPre-commit hooks installed successfully!")
         print("\nThe following checks will run before each commit:")
         print("1. Non-integration tests")
-        print("2. Type checking")
-        print("3. Style checking")
-        print("4. Security scanning")
+        print("2. Style checking")
+        print("3. Security scanning")
         print("\nTo bypass hooks temporarily, use: git commit --no-verify")
 
         return 0

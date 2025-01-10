@@ -1,7 +1,7 @@
 # Legion: A Provider-Agnostic Multi-Agent Framework
 
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Version](https://img.shields.io/badge/Version-0.1.0-blue.svg)](https://github.com/og-hayden/legion)
+[![Version](https://img.shields.io/badge/Version-0.0.1-blue.svg)](https://github.com/og-hayden/legion)
 
 Legion is a flexible and provider-agnostic framework designed to simplify the creation of sophisticated multi-agent systems. It provides a set of tools and abstractions to build, manage, and monitor AI agents, chains, teams, and graphs, allowing you to focus on the logic of your application rather than the underlying infrastructure.
 
