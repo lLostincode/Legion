@@ -114,8 +114,8 @@ class LLMInterface(ABC):
             Message(
                 role=Role.USER,
                 content=(
-                    "Here is the conversation history:\n\n"
-                    f"{'\n'.join(narrative)}\n\n"
+                    "Here is the conversation history:\n\n" +
+                    "\n".join(narrative) + "\n\n" +
                     "Format the assistant's final response according to the schema."
                 )
             )
@@ -184,20 +184,20 @@ class LLMInterface(ABC):
 
         formatting_instructions = (
             "Create a JSON response with these fields:\n" +
-            "\n".join(fields) + "\n\n"
-            "Example format:\n"
-            "{\n"
-            "  // Fill in actual values, not descriptions\n"
-            "  // String fields need quotes, numbers don't\n"
-            "  // Required fields must be included\n"
-            "  // Optional fields can be null\n"
-            "}\n\n"
-            "Rules:\n"
-            "1. Use exact field names shown above\n"
-            "2. Include all required fields\n"
-            "3. Fill in actual values, not field descriptions\n"
-            "4. Format values according to their types (strings in quotes, numbers without)\n"
-            "5. Do not add extra fields\n\n"
+            "\n".join(fields) + "\n\n" +
+            "Example format:\n" +
+            "{\n" +
+            "  // Fill in actual values, not descriptions\n" +
+            "  // String fields need quotes, numbers don't\n" +
+            "  // Required fields must be included\n" +
+            "  // Optional fields can be null\n" +
+            "}\n\n" +
+            "Rules:\n" +
+            "1. Use exact field names shown above\n" +
+            "2. Include all required fields\n" +
+            "3. Fill in actual values, not field descriptions\n" +
+            "4. Format values according to their types (strings in quotes, numbers without)\n" +
+            "5. Do not add extra fields\n\n" +
             "Format response as valid JSON only. No other text."
         )
 

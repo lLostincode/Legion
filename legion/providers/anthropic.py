@@ -30,6 +30,11 @@ class AnthropicProvider(LLMInterface):
 
     DEFAULT_MAX_TOKENS = 4096
 
+    def __init__(self, config: Optional[ProviderConfig] = None, **kwargs):
+        if not config or not config.api_key:
+            raise ProviderError("API key is required for Anthropic")
+        super().__init__(config=config, **kwargs)
+
     def _setup_client(self) -> None:
         """Initialize Anthropic client"""
         try:
@@ -50,40 +55,28 @@ class AnthropicProvider(LLMInterface):
             if msg.role == Role.SYSTEM:
                 continue  # System messages handled separately
 
-            # Initialize content list
-            content = []
+            # Initialize message
+            formatted_msg = {"role": "user" if msg.role in [Role.USER, Role.TOOL] else "assistant"}
 
-            # Add text content if present
-            if msg.content:
-                content.append({
-                    "type": "text",
-                    "text": msg.content
-                })
-
-            # Add tool calls if present
+            # Handle different message types
             if msg.tool_calls:
-                for tool_call in msg.tool_calls:
-                    content.append({
-                        "type": "tool_use",
-                        "id": tool_call["id"],
-                        "name": tool_call["function"]["name"],
-                        "input": json.loads(tool_call["function"]["arguments"])
-                    })
-
-            # Add tool results if present
-            if msg.role == Role.TOOL and msg.tool_call_id:
-                content = [{  # Override any previous content
+                formatted_msg["content"] = [{
+                    "type": "tool_use",
+                    "id": tool_call["id"],
+                    "name": tool_call["function"]["name"],
+                    "input": json.loads(tool_call["function"]["arguments"])
+                } for tool_call in msg.tool_calls]
+            elif msg.role == Role.TOOL and msg.tool_call_id:
+                formatted_msg["content"] = [{
                     "type": "tool_result",
                     "tool_use_id": msg.tool_call_id,
                     "content": msg.content
                 }]
+            else:
+                # For basic messages, use string content
+                formatted_msg["content"] = msg.content
 
-            # Only add message if it has content
-            if content:
-                anthropic_messages.append({
-                    "role": "user" if msg.role in [Role.USER, Role.TOOL] else "assistant",
-                    "content": content
-                })
+            anthropic_messages.append(formatted_msg)
 
         return anthropic_messages
 
@@ -101,20 +94,51 @@ class AnthropicProvider(LLMInterface):
                 None
             )
 
-            response = self.client.messages.create(
-                model=model,
-                messages=self._format_messages(messages),
-                system=system_message,
-                temperature=params.temperature,
-                max_tokens=params.max_tokens or self.DEFAULT_MAX_TOKENS
-            )
+            # Debug: Print formatted messages
+            if self.debug:
+                print("\nSending to Anthropic API:")
+                print(f"Model: {model}")
+                print(f"Messages: {self._format_messages(messages)}")
+                print(f"System: {system_message}")
+                print(f"Temperature: {params.temperature}")
+                print(f"Max Tokens: {params.max_tokens or self.DEFAULT_MAX_TOKENS}")
 
-            return ModelResponse(
+            # Create request parameters
+            request_params = {
+                "model": model,
+                "messages": self._format_messages(messages),
+                "temperature": params.temperature,
+                "max_tokens": params.max_tokens or self.DEFAULT_MAX_TOKENS
+            }
+            
+            # Only add system if it's not None
+            if system_message is not None:
+                request_params["system"] = system_message
+
+            response = self.client.messages.create(**request_params)
+
+            # Debug: Print raw response
+            if self.debug:
+                print("\nReceived from Anthropic API:")
+                print(f"Response Type: {type(response)}")
+                print(f"Response Content: {response.content}")
+                print(f"Response Model Dump: {response.model_dump()}")
+
+            model_response = ModelResponse(
                 content=self._extract_content(response),
-                raw_response=response,
+                raw_response=response.model_dump(),
                 usage=self._extract_usage(response),
                 tool_calls=None
             )
+
+            # Debug: Print final model response
+            if self.debug:
+                print("\nFinal ModelResponse:")
+                print(f"Content: {model_response.content}")
+                print(f"Raw Response: {model_response.raw_response}")
+                print(f"Usage: {model_response.usage}")
+
+            return model_response
         except Exception as e:
             raise ProviderError(f"Anthropic completion failed: {str(e)}")
 
@@ -124,8 +148,9 @@ class AnthropicProvider(LLMInterface):
         model: str,
         tools: Sequence[BaseTool],
         temperature: float,
-        json_temperature: float,
-        max_tokens: Optional[int] = None
+        max_tokens: Optional[int] = None,
+        format_json: bool = False,
+        json_schema: Optional[Type[BaseModel]] = None
     ) -> ModelResponse:
         """Get a chat completion with tool use"""
         try:
@@ -141,6 +166,16 @@ class AnthropicProvider(LLMInterface):
                 "Simply make sequential tool calls until you have all the information needed, "
                 "then provide your final response."
             )
+
+            # If JSON formatting is requested, add JSON instructions
+            if format_json and json_schema:
+                schema_json = json_schema.model_json_schema()
+                json_instructions = (
+                    "\n\nAfter using tools, format your final response as JSON matching this schema:\n"
+                    f"{json.dumps(schema_json, indent=2)}\n\n"
+                    "Respond ONLY with valid JSON matching this schema. No other text."
+                )
+                tool_instructions = tool_instructions + json_instructions
 
             if system_message:
                 system_message = f"{system_message}\n\n{tool_instructions}"
@@ -165,6 +200,7 @@ class AnthropicProvider(LLMInterface):
             conversation = []
             current_messages = messages.copy()
             final_response = None
+            final_tool_calls = []
 
             while True:
                 # Format current messages
@@ -215,46 +251,56 @@ class AnthropicProvider(LLMInterface):
                 conversation.append(assistant_msg)
                 current_messages.append(assistant_msg)
 
-                if not tool_calls:
+                if tool_calls:
+                    final_tool_calls.extend(tool_calls)
+                    # Process tool calls
+                    for tool_call in tool_calls:
+                        tool = next(
+                            (t for t in tools if t.name == tool_call["function"]["name"]),
+                            None
+                        )
+                        if tool:
+                            try:
+                                args = json.loads(tool_call["function"]["arguments"])
+                                result = tool(**args)
+
+                                # Add tool response to conversation
+                                tool_msg = Message(
+                                    role=Role.TOOL,
+                                    content=str(result),
+                                    tool_call_id=tool_call["id"],
+                                    name=tool_call["function"]["name"]
+                                )
+                                conversation.append(tool_msg)
+                                current_messages.append(tool_msg)
+                            except Exception as e:
+                                raise ProviderError(f"Error executing {tool.name}: {str(e)}")
+                else:
                     # No more tool calls, this is our final response
                     final_response = response
                     break
 
-                # Process tool calls
-                for tool_call in tool_calls:
-                    tool = next(
-                        (t for t in tools if t.name == tool_call["function"]["name"]),
-                        None
-                    )
-                    if tool:
-                        try:
-                            args = json.loads(tool_call["function"]["arguments"])
-                            result = tool(**args)
-
-                            # Add tool response to conversation
-                            tool_msg = Message(
-                                role=Role.TOOL,
-                                content=str(result),
-                                tool_call_id=tool_call["id"],
-                                name=tool_call["function"]["name"]
-                            )
-                            conversation.append(tool_msg)
-                            current_messages.append(tool_msg)
-                        except Exception as e:
-                            raise ProviderError(f"Error executing {tool.name}: {str(e)}")
-
-            if self.debug and tool_calls:
+            if self.debug and final_tool_calls:
                 print("\nTool calls triggered:")
-                for call in tool_calls:
+                for call in final_tool_calls:
                     print(f"- {call['function']['name']}: {call['function']['arguments']}")
                 if content:
                     print(f"\nAssistant message: {content}")
 
+            # If JSON formatting was requested, validate the response
+            content = self._extract_content(final_response)
+            if format_json and json_schema:
+                try:
+                    data = json.loads(content)
+                    json_schema.model_validate(data)
+                except Exception as e:
+                    raise ProviderError(f"Invalid JSON response: {str(e)}")
+
             return ModelResponse(
-                content=self._extract_content(final_response),
-                raw_response=final_response,
+                content=content,
+                raw_response=final_response.model_dump(),
                 usage=self._extract_usage(final_response),
-                tool_calls=None  # No need to return tool calls in final response
+                tool_calls=final_tool_calls if final_tool_calls else None
             )
         except Exception as e:
             raise ProviderError(f"Anthropic tool completion failed: {str(e)}")
@@ -263,7 +309,7 @@ class AnthropicProvider(LLMInterface):
         self,
         messages: List[Message],
         model: str,
-        schema: Optional[Type[BaseModel]],
+        schema: Type[BaseModel],
         temperature: float,
         max_tokens: Optional[int] = None
     ) -> ModelResponse:
@@ -293,7 +339,7 @@ class AnthropicProvider(LLMInterface):
 
             return ModelResponse(
                 content=content,
-                raw_response=response,
+                raw_response=response.model_dump(),
                 usage=self._extract_usage(response),
                 tool_calls=None
             )
@@ -330,17 +376,16 @@ class AnthropicProvider(LLMInterface):
         if not hasattr(response, "content"):
             return ""
 
-        if isinstance(response.content, str):
-            return response.content.strip()
-
-        text_blocks = []
-        for block in response.content:
-            if block.type == "text":
-                text_blocks.append(block.text)
-            elif self.debug:
-                print(f"Skipping non-text block of type: {block.type}")
-
-        return " ".join(text_blocks).strip()
+        if isinstance(response.content, list):
+            text_blocks = []
+            for block in response.content:
+                if getattr(block, "type", None) == "text":
+                    text_blocks.append(block.text)
+                elif self.debug:
+                    print(f"Skipping non-text block of type: {getattr(block, 'type', 'unknown')}")
+            return " ".join(text_blocks).strip()
+        
+        return str(response.content).strip()
 
     def _extract_usage(self, response: Any) -> TokenUsage:
         """Extract token usage from Anthropic response"""
@@ -352,3 +397,115 @@ class AnthropicProvider(LLMInterface):
                 getattr(response.usage, "output_tokens", 0)
             )
         )
+
+    async def _asetup_client(self) -> None:
+        """Initialize Anthropic client asynchronously"""
+        await self._setup_client()
+
+    async def _aget_chat_completion(
+        self,
+        messages: List[Message],
+        model: str,
+        temperature: float,
+        max_tokens: Optional[int] = None
+    ) -> ModelResponse:
+        """Get a basic chat completion asynchronously"""
+        params = ChatParameters(
+            temperature=temperature,
+            max_tokens=max_tokens
+        )
+        return self._get_chat_completion(messages, model, params)
+
+    async def _aget_tool_completion(
+        self,
+        messages: List[Message],
+        model: str,
+        tools: Sequence[BaseTool],
+        temperature: float,
+        max_tokens: Optional[int] = None
+    ) -> ModelResponse:
+        """Get a chat completion with tool use asynchronously"""
+        return self._get_tool_completion(messages, model, tools, temperature, max_tokens)
+
+    async def _aget_json_completion(
+        self,
+        messages: List[Message],
+        model: str,
+        schema: Type[BaseModel],
+        temperature: float,
+        max_tokens: Optional[int] = None
+    ) -> ModelResponse:
+        """Get a chat completion formatted as JSON asynchronously"""
+        return self._get_json_completion(messages, model, schema, temperature, max_tokens)
+
+    def complete(
+        self,
+        messages: List[Message],
+        model: str,
+        tools: Optional[Sequence[BaseTool]] = None,
+        temperature: float = 1.0,
+        response_schema: Optional[Type[BaseModel]] = None,
+        max_tokens: Optional[int] = None
+    ) -> ModelResponse:
+        """Get a completion with optional tools and JSON formatting"""
+        if self.debug:
+            print("\n🔌 Anthropic Provider:")
+            print(f"Model: {model}")
+            print(f"Temperature: {temperature}")
+            print(f"Tools: {[t.name for t in (tools or [])]}")
+            print(f"Response Schema: {response_schema.__name__ if response_schema else 'None'}")
+            print("\nMessages:")
+            for msg in messages:
+                print(f"{msg.role}: {msg.content[:100]}...")
+
+        try:
+            if tools:
+                if self.debug:
+                    print("\n🛠️ Making tool completion request...")
+                    print("Tool schemas:")
+                    for tool in tools:
+                        print(f"\n{tool.name}:")
+                        print(json.dumps(tool.parameters.model_json_schema(), indent=2))
+
+                return self._get_tool_completion(
+                    messages=messages,
+                    model=model,
+                    tools=tools,
+                    temperature=temperature,
+                    max_tokens=max_tokens,
+                    format_json=bool(response_schema),
+                    json_schema=response_schema
+                )
+            elif response_schema:
+                if self.debug:
+                    print("\n📋 Making JSON completion request...")
+                    print("Schema:")
+                    print(json.dumps(response_schema.model_json_schema(), indent=2))
+
+                return self._get_json_completion(
+                    messages=messages,
+                    model=model,
+                    schema=response_schema,
+                    temperature=temperature,
+                    max_tokens=max_tokens
+                )
+            else:
+                if self.debug:
+                    print("\n💬 Making basic completion request...")
+
+                params = ChatParameters(
+                    temperature=temperature,
+                    max_tokens=max_tokens
+                )
+                return self._get_chat_completion(
+                    messages=messages,
+                    model=model,
+                    params=params
+                )
+        except Exception as e:
+            if self.debug:
+                print(f"\n❌ Provider error: {str(e)}")
+                print(f"Error type: {type(e)}")
+                import traceback
+                print(f"Traceback:\n{traceback.format_exc()}")
+            raise
