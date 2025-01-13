@@ -153,18 +153,19 @@ Look for issues labeled `good-first-issue` if you're new to the project. These a
 
 ## Getting Help
 
-- Join our Discord server for real-time discussion
+- [Join our Discord server](https://discord.gg/B63rdfQ6) for real-time discussion
 - Use the #help channel for technical questions
 - Tag maintainers in GitHub issues if you need clarification
 
 ## Discord Channels
 
 - #announcements: Project updates and news
-- #general: Introduce yourself to the community and ask questions
+- #general: Introduce yourself and ask questions
 - #help: Get help with technical issues
 - #development: Discuss ongoing development
-- #ideas: Share and discuss feature ideas
 - #pull-requests: PR discussions and reviews
+- #give-your-input: Share and discuss feature ideas
+- #general-ai-discussion: Talk all things AI 🤖
 
 ## Recognition
 
