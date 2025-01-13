@@ -20,6 +20,13 @@ class TokenUsage(BaseModel):
     completion_tokens: int
     total_tokens: int
 
+class ToolCall(BaseModel):
+    """Tool call information"""
+
+    id: str = Field(description="Unique identifier for the tool call")
+    name: str = Field(description="Name of the tool to call")
+    arguments: str = Field(description="Arguments to pass to the tool as a JSON string")
+
 class Message(BaseModel):
     """Message schema"""
 
@@ -27,7 +34,7 @@ class Message(BaseModel):
     role: Role = Role.USER
     name: Optional[str] = None
     context: Optional[Dict[str, Any]] = None
-    tool_calls: Optional[List[Dict[str, Any]]] = None
+    tool_calls: Optional[List[Union[ToolCall, Dict[str, Any]]]] = None
     tool_call_id: Optional[str] = None
 
 class ModelResponse(BaseModel):
@@ -35,7 +42,7 @@ class ModelResponse(BaseModel):
 
     content: str
     role: Role = Role.ASSISTANT
-    tool_calls: Optional[List[Dict[str, Any]]] = None
+    tool_calls: Optional[List[Union[ToolCall, Dict[str, Any]]]] = None
     raw_response: Optional[Dict[str, Any]] = None
     usage: Optional[TokenUsage] = None
 
@@ -47,6 +54,7 @@ class ProviderConfig(BaseModel):
     organization_id: Optional[str] = None
     timeout: int = Field(default=60, ge=1)
     max_retries: int = Field(default=3, ge=0)
+    model: Optional[str] = None
 
     class Config:
         extra = "allow"  # Allow provider-specific config options
