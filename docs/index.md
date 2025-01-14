@@ -1,26 +1,27 @@
 # Legion Documentation
 
-Welcome to the Legion documentation. This documentation provides comprehensive information about setting up, using, and contributing to the Legion project.
+Welcome to the Legion documentation! This documentation will help you understand and use Legion effectively.
 
 ## Quick Links
 
-- [Development Environment Setup](setup-dev-env.md)
-- [Nix Setup Guide](setup-nix.md)
+- 📚 [Installation Guide](getting-started/installation.md)
+- 🚀 [Quick Start](getting-started/quick-start.md)
+- 🤖 [Agent Definition](core-concepts/agents/agent-definition.md)
+- 🛠️ [Development Setup](setup-dev-env.md)
+- 👥 [Contributing](../CONTRIBUTING.md)
+
+## What is Legion?
+
+Legion is a powerful framework for building and managing agents. This documentation will guide you through installation, basic concepts, and advanced usage.
 
 ## Getting Started
 
-Legion is a powerful tool that [brief description of your project]. This documentation will help you get started with Legion and make the most of its features.
+To get started with Legion, follow these steps:
 
-## Project Structure
+1. First, follow our [Installation Guide](getting-started/installation.md)
+2. Then, check out the [Quick Start](getting-started/quick-start.md) guide
+3. Learn about [Core Concepts](core-concepts/agents/agent-definition.md)
 
-The project is organized as follows:
+## Contributing
 
-```
-legion/
-├── docs/          # Documentation
-├── examples/      # Example code and usage
-├── legion/        # Main source code
-├── scripts/       # Utility scripts
-├── tests/         # Test suite
-└── utils/         # Utility functions
-```
+We welcome contributions! Please see our [Contributing Guide](../CONTRIBUTING.md) for details on how to get involved.
