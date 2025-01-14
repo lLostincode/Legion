@@ -35,7 +35,6 @@ repo_name: LLMP-io/Legion
 
 extra:
   generator: false
-  copyright:  Legion 2025
   social:
     - icon: fontawesome/brands/github
       link: https://github.com/LLMP-io/Legion
@@ -43,6 +42,11 @@ extra:
 
 extra_css:
   - stylesheets/docs.css
+  - stylesheets/footer.css
+  - stylesheets/content.css
+  - stylesheets/navbar.css
+  - stylesheets/sidebar.css
+  - stylesheets/theme.css
 
 markdown_extensions:
   - pymdownx.highlight:
@@ -58,11 +62,8 @@ markdown_extensions:
 nav:
   - Home: index.md
   - Getting Started:
-    - Quick Start Guide: getting-started/quick-start.md
     - Installation: getting-started/installation.md
-    - Basic Concepts: getting-started/basic-concepts.md
-    - First Agent Example: getting-started/first-agent.md
-    - Configuration: getting-started/configuration.md
+    - Quick Start: getting-started/quick-start.md
   - Core Concepts:
     - Agents:
       - Agent Definition: core-concepts/agents/agent-definition.md
@@ -78,6 +79,7 @@ nav:
       - Supported LLM Providers: core-concepts/providers/supported-providers.md
       - Provider Configuration: core-concepts/providers/provider-configuration.md
       - Custom Provider Integration: core-concepts/providers/custom-integration.md
+  - Contributing: CONTRIBUTING.md
   - Development Guide:
     - Architecture Overview: development-guide/architecture.md
     - Project Structure: development-guide/project-structure.md
@@ -89,3 +91,5 @@ nav:
     - Migration Guides: release-notes/migration-guides.md
     - Deprecation Notices: release-notes/deprecation-notices.md
     - Roadmap: release-notes/roadmap.md
+
+copyright:  © 2025 Legion
