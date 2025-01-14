@@ -33,7 +33,15 @@ Welcome! We're excited you're interested in contributing to Legion. This documen
 
    Note: Make sure you have Python 3.8+ installed before running the setup script.
 
-3. **Create a Branch**
+3. **Configure Git Email**
+   To maintain privacy while contributing, you can use a GitHub-provided no-reply email address:
+   ```bash
+   # Replace 'username' with your GitHub username
+   # Get your GitHub user ID from: https://api.github.com/users/username
+   git config user.email "ID+username@users.noreply.github.com"
+   ```
+
+4. **Create a Branch**
    ```bash
    git checkout -b feature/your-feature-name
    # or

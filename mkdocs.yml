@@ -1,0 +1,63 @@
+site_name: Legion Documentation
+theme:
+  name: material
+  features:
+    - navigation.sections
+    - navigation.expand
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+  palette:
+    # Palette toggle for dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: custom
+      accent: custom
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+    # Palette toggle for light mode
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: custom
+      accent: custom
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+  font:
+    text: Roboto
+    code: Roboto Mono
+  icon:
+    repo: fontawesome/brands/github
+
+repo_url: https://github.com/LLMP-io/Legion
+repo_name: LLMP-io/Legion
+
+extra:
+  generator: false
+  copyright:  Legion 2025
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/LLMP-io/Legion
+      name: Legion on GitHub
+
+extra_css:
+  - stylesheets/docs.css
+
+markdown_extensions:
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences
+  - admonition
+  - pymdownx.details
+  - attr_list
+  - md_in_html
+
+nav:
+  - Home: index.md
+  - Setup:
+    - Development Setup:
+      - Development Environment: setup-dev-env.md
+      - Nix Setup: setup-nix.md
