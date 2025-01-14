@@ -45,4 +45,3 @@ if __name__ == "__main__":
 - Read the [Installation Guide](installation.md) for detailed setup instructions
 - Learn about [Basic Concepts](basic-concepts.md)
 - Try the [First Agent Example](first-agent.md)
-- Configure your environment using the [Configuration Guide](configuration.md)

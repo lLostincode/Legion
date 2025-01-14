@@ -41,7 +41,6 @@ extra:
       name: Legion on GitHub
 
 extra_css:
-  - stylesheets/docs.css
   - stylesheets/footer.css
   - stylesheets/content.css
   - stylesheets/navbar.css
@@ -64,6 +63,9 @@ nav:
   - Getting Started:
     - Installation: getting-started/installation.md
     - Quick Start: getting-started/quick-start.md
+    - Basic Concepts: getting-started/basic-concepts.md
+    - First Agent: getting-started/first-agent.md
+
   - Core Concepts:
     - Agents:
       - Agent Definition: core-concepts/agents/agent-definition.md
@@ -78,18 +80,17 @@ nav:
     - Providers:
       - Supported LLM Providers: core-concepts/providers/supported-providers.md
       - Provider Configuration: core-concepts/providers/provider-configuration.md
-      - Custom Provider Integration: core-concepts/providers/custom-integration.md
-  - Contributing: CONTRIBUTING.md
+  - Examples & Tutorials:
+    - Basic Examples: examples/basic-examples.md
+  - Contributing: contributing/index.md
   - Development Guide:
     - Architecture Overview: development-guide/architecture.md
     - Project Structure: development-guide/project-structure.md
     - Development Setup: development-guide/setup.md
-  - Examples & Tutorials:
-    - Basic Examples: examples/basic-examples.md
+    - Troubleshooting: development-guide/troubleshooting.md
+    - Documentation Guide: DOCUMENTATION_GUIDE.md
   - Release Notes:
     - Version History: release-notes/version-history.md
-    - Migration Guides: release-notes/migration-guides.md
-    - Deprecation Notices: release-notes/deprecation-notices.md
     - Roadmap: release-notes/roadmap.md
 
 copyright:  © 2025 Legion

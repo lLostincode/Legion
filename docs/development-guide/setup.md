@@ -117,6 +117,6 @@ python verify_env.py
 
 If you encounter any issues during setup:
 
-1. Check our [Troubleshooting Guide](../troubleshooting.md)
+1. Check our [Troubleshooting Guide](troubleshooting.md)
 2. Open an issue on our [GitHub repository](https://github.com/LLMP-io/Legion)
 3. Join our [Discord community](https://discord.gg/legion) for real-time support

@@ -7,8 +7,8 @@ Welcome to the Legion documentation! This documentation will help you understand
 - 📚 [Installation Guide](getting-started/installation.md)
 - 🚀 [Quick Start](getting-started/quick-start.md)
 - 🤖 [Agent Definition](core-concepts/agents/agent-definition.md)
-- 🛠️ [Development Setup](setup-dev-env.md)
-- 👥 [Contributing](../CONTRIBUTING.md)
+- 🛠️ [Development Setup](development-guide/setup.md)
+- 👥 [Contributing](contributing/index.md)
 
 ## What is Legion?
 
@@ -24,4 +24,4 @@ To get started with Legion, follow these steps:
 
 ## Contributing
 
-We welcome contributions! Please see our [Contributing Guide](../CONTRIBUTING.md) for details on how to get involved.
+We welcome contributions! Please see our [Contributing Guide](contributing/index.md) for details on how to get involved.
