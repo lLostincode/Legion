@@ -57,7 +57,35 @@ markdown_extensions:
 
 nav:
   - Home: index.md
-  - Setup:
-    - Development Setup:
-      - Development Environment: setup-dev-env.md
-      - Nix Setup: setup-nix.md
+  - Getting Started:
+    - Quick Start Guide: getting-started/quick-start.md
+    - Installation: getting-started/installation.md
+    - Basic Concepts: getting-started/basic-concepts.md
+    - First Agent Example: getting-started/first-agent.md
+    - Configuration: getting-started/configuration.md
+  - Core Concepts:
+    - Agents:
+      - Agent Definition: core-concepts/agents/agent-definition.md
+      - System Prompts: core-concepts/agents/system-prompts.md
+      - Agent State: core-concepts/agents/agent-state.md
+      - Agent Communication: core-concepts/agents/agent-communication.md
+    - Tools:
+      - Tool Decorators: core-concepts/tools/tool-decorators.md
+      - Parameter Injection: core-concepts/tools/parameter-injection.md
+      - Tool Development: core-concepts/tools/tool-development.md
+      - Built-in Tools: core-concepts/tools/built-in-tools.md
+    - Providers:
+      - Supported LLM Providers: core-concepts/providers/supported-providers.md
+      - Provider Configuration: core-concepts/providers/provider-configuration.md
+      - Custom Provider Integration: core-concepts/providers/custom-integration.md
+  - Development Guide:
+    - Architecture Overview: development-guide/architecture.md
+    - Project Structure: development-guide/project-structure.md
+    - Development Setup: development-guide/setup.md
+  - Examples & Tutorials:
+    - Basic Examples: examples/basic-examples.md
+  - Release Notes:
+    - Version History: release-notes/version-history.md
+    - Migration Guides: release-notes/migration-guides.md
+    - Deprecation Notices: release-notes/deprecation-notices.md
+    - Roadmap: release-notes/roadmap.md

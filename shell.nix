@@ -5,7 +5,6 @@ pkgs.mkShell {
     # Python
     python311
     python311Packages.pip
-    python311Packages.virtualenv
     
     # Build tools
     gcc
@@ -20,14 +19,6 @@ pkgs.mkShell {
   ];
 
   shellHook = ''
-    # Create virtual environment if it doesn't exist
-    if [ ! -d ".venv" ]; then
-      python -m venv .venv
-    fi
-    
-    # Activate virtual environment
-    source .venv/bin/activate
-    
     # Upgrade pip
     pip install --upgrade pip
     
