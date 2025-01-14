@@ -30,6 +30,7 @@ theme:
   icon:
     repo: fontawesome/brands/github
 
+site_url: https://lLostincode.github.io/Legion/
 repo_url: https://github.com/LLMP-io/Legion
 repo_name: LLMP-io/Legion
 
