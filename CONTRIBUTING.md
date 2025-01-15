@@ -33,7 +33,15 @@ Welcome! We're excited you're interested in contributing to Legion. This documen
 
    Note: Make sure you have Python 3.8+ installed before running the setup script.
 
-3. **Create a Branch**
+3. **Configure Git Email**
+   To maintain privacy while contributing, you can use a GitHub-provided no-reply email address:
+   ```bash
+   # Replace 'username' with your GitHub username
+   # Get your GitHub user ID from: https://api.github.com/users/username
+   git config user.email "ID+username@users.noreply.github.com"
+   ```
+
+4. **Create a Branch**
    ```bash
    git checkout -b feature/your-feature-name
    # or
@@ -135,6 +143,37 @@ python scripts/security.py legion/agents legion/blocks
    - Maintainers will review your PR
    - Address any requested changes
    - Once approved, maintainers will merge your PR
+
+### **Collaboration Options**
+
+There are several ways to collaborate with other contributors:
+
+   a) Direct collaboration on your fork:
+   - Go to your fork's Settings -> Collaborators
+   - Add collaborators by their GitHub username
+   - They can push directly to branches in your fork
+   - Either collaborator can create PRs to upstream
+
+   b) Fork-to-fork collaboration:
+   - Other contributors can fork your fork
+   - They create PRs to your fork
+   - You create PR to upstream
+
+   c) Standard collaboration (most common):
+   - Each contributor forks the upstream repository
+   - Everyone creates PRs directly to upstream
+   - Stay in sync with:
+     ```bash
+     git fetch upstream
+     git merge upstream/main
+     ```
+   - Track others' feature branches with:
+     ```bash
+     git fetch upstream feature/their-branch
+     git checkout -b feature/their-branch upstream/feature/their-branch
+     ```
+
+   Note: GitHub tracks contributions through commits, not PRs. All contributors get credit for their commits once merged into upstream.
 
 ## Issue Guidelines
 
