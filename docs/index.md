@@ -7,7 +7,7 @@ Welcome to the Legion documentation! This documentation will help you understand
 - 📚 [Installation Guide](getting-started/installation.md)
 - 🚀 [Quick Start](getting-started/quick-start.md)
 - 🤖 [Agent Definition](core-concepts/agents/agent-definition.md)
-- 🛠️ [Development Setup](development-guide/setup.md)
+- 🛠️ [Development Setup](contributing/setup-development.md)
 - 👥 [Contributing](contributing/index.md)
 
 ## What is Legion?

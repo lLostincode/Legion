@@ -1,16 +1,8 @@
 name: Deploy Documentation
 on:
-  push:
-    branches:
-      - main
-      - feature/docs
-    paths:
-      - 'docs/**'
-      - 'mkdocs.yml'
   pull_request:
     branches:
       - main
-      - feature/docs
     paths:
       - 'docs/**'
       - 'mkdocs.yml'
