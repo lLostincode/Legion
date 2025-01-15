@@ -144,36 +144,30 @@ python scripts/security.py legion/agents legion/blocks
    - Address any requested changes
    - Once approved, maintainers will merge your PR
 
-### **Collaboration Options**
+### **Collaboration Patterns**
 
-There are several ways to collaborate with other contributors:
-
-   a) Direct collaboration on your fork:
-   - Go to your fork's Settings -> Collaborators
-   - Add collaborators by their GitHub username
-   - They can push directly to branches in your fork
-   - Either collaborator can create PRs to upstream
-
-   b) Fork-to-fork collaboration:
-   - Other contributors can fork your fork
-   - They create PRs to your fork
-   - You create PR to upstream
-
-   c) Standard collaboration (most common):
-   - Each contributor forks the upstream repository
-   - Everyone creates PRs directly to upstream
-   - Stay in sync with:
+1. **Direct to Upstream** (Recommended)
+   - Each contributor maintains their fork
+   - Create PRs directly to upstream
+   - Sync fork:
      ```bash
      git fetch upstream
-     git merge upstream/main
-     ```
-   - Track others' feature branches with:
-     ```bash
-     git fetch upstream feature/their-branch
-     git checkout -b feature/their-branch upstream/feature/their-branch
+     git rebase upstream/main
      ```
 
-   Note: GitHub tracks contributions through commits, not PRs. All contributors get credit for their commits once merged into upstream.
+2. **Fork Collaboration**
+   - Add collaborators to your fork's settings
+   - Both can push branches
+   - Create single PR to upstream
+   - Maintain clear ownership of the PR
+
+3. **Cross-fork PRs**
+   - For non-collaborator contributions
+   - Create PR between forks
+   - Owner submits final PR upstream
+
+Note: Contributions are tracked through PRs, not individual commits due to squash merging. All contributors are credited in the PR history.
+
 
 ## Issue Guidelines
 
