@@ -5,7 +5,7 @@ This project uses [MkDocs-Material](https://squidfunk.github.io/mkdocs-material/
 ## Quick Start
 
 ```bash
-pip install mkdocs-material
+pip install mkdocs-material==9.5.49
 
 # Start dev server
 mkdocs serve
